@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backroom by FMR</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/x-icon" href="Logo-FMR.png">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <img src="Logo-FMR.png" alt="Logo Backroom by FMR" class="logo-img">
+                    Backroom by FMR
+                </div>
+                <nav>
+                    <ul>
+                        <li><a href="#" class="active" data-tab="stock">Inventaire</a></li>
+                        <li><a href="#" data-tab="import">Ajouter un produit</a></li>
+                        <li><a href="#" data-tab="stats">Statistiques</a></li>
+                    </ul>
+                </nav>
+                <div class="theme-switch-wrapper">
+                    <i class="fas fa-sun"></i>
+                    <label class="theme-switch" for="theme-checkbox">
+                        <input type="checkbox" id="theme-checkbox" />
+                        <div class="slider round"></div>
+                    </label>
+                    <i class="fas fa-moon"></i>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section class="tab-content" id="import">
+                <div class="upload-section">
+                    <h2 class="section-title"><i class="fas fa-file-import"></i> Options d'importation</h2>
+                    <div class="upload-options">
+                        <div class="upload-option" id="local-folder">
+                            <i class="fas fa-images"></i><h3>Depuis des images</h3><p>Créez une fiche et ajoutez vos photos</p>
+                            <input type="file" id="file-input" multiple accept="image/*" class="hidden">
+                        </div>
+                        <div class="upload-option" id="csv-import">
+                            <i class="fas fa-file-csv"></i><h3>Importer un fichier CSV</h3><p>Ajoutez plusieurs produits d'un coup</p>
+                            <input type="file" id="csv-file-input" accept=".csv" class="hidden">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-container">
+                    <div class="image-preview">
+                        <h3 class="section-title"><i class="fas fa-images"></i> Aperçu des images</h3>
+                        <div class="preview-grid" id="preview-container">
+                           <div class="placeholder-preview">
+                                <i class="fas fa-camera"></i><p>Vos images apparaîtront ici.</p>
+                           </div>
+                        </div>
+                    </div>
+
+                    <div class="item-form">
+                        <h3 class="section-title"><i class="fas fa-tags"></i> Détails du produit</h3>
+                        <form id="product-form" novalidate>
+                            </form>
+                    </div>
+                </div>
+            </section>
+            
+            <section class="tab-content active" id="stock">
+                <div class="stock-header">
+                    <div class="main-title-container">
+                         <button id="back-btn" class="btn-icon hidden" title="Retour"><i class="fas fa-arrow-left"></i></button>
+                         <h2 class="section-title" id="stock-title"><i class="fas fa-box-open"></i> Inventaire de la boutique</h2>
+                    </div>
+                    <div class="stock-controls">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="search-input" placeholder="Rechercher un produit...">
+                        </div>
+                        <div class="selection-bar" id="selection-bar">
+                            <div class="selection-info">
+                                <button id="cancel-selection-btn" class="btn-icon" title="Annuler la sélection"><i class="fas fa-times"></i></button>
+                                <span id="selection-count-label">0 sélectionné(s)</span>
+                            </div>
+                            <div class="selection-actions" id="selection-actions">
+                                <button id="select-all-btn" class="btn btn-secondary">Tout sélectionner</button>
+                                <button id="delete-selected-btn" class="btn"><i class="fas fa-trash-alt"></i> Supprimer</button>
+                            </div>
+                             <div class="selection-confirm-delete" id="selection-confirm-delete">
+                                <span>Êtes-vous sûr ?</span>
+                                <div class="confirm-actions">
+                                    <button id="confirm-delete-yes-btn" class="btn btn-confirm-yes">Oui</button>
+                                    <button id="confirm-delete-no-btn" class="btn btn-confirm-no">Non</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="filter-group" id="filter-group">
+                            <select id="category-filter" aria-label="Filtrer par catégorie">
+                                <option value="">Toutes les catégories</option>
+                                <option value="textile">Textile</option>
+                                <option value="mobilier">Mobilier</option>
+                                <option value="accessoire">Accessoire</option>
+                                <option value="decoration">Décoration</option>
+                                <option value="oeuvre">Œuvre</option>
+                                <option value="chaussure">Chaussure</option>
+                            </select>
+                            <select id="status-filter" aria-label="Filtrer par état">
+                                <option value="">Tous les états</option>
+                                <option value="new">Neuf</option><option value="good">Très bon état</option><option value="used">Usé</option><option value="damaged">Endommagé</option>
+                            </select>
+                            <button class="btn btn-export"><i class="fas fa-file-export"></i> Exporter (CSV)</button>
+                        </div>
+                    </div>
+                    <nav id="breadcrumbs" aria-label="breadcrumb"></nav>
+                </div>
+                <div class="inventory-grid" id="inventory-grid"></div>
+
+                <div class="fab-container">
+                    <button class="fab" id="fab-add-btn" aria-label="Ajouter">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <div class="fab-options">
+                         <button class="fab-option" id="add-product-fab-btn" data-tooltip="Ajouter un produit">
+                            <i class="fas fa-tshirt"></i>
+                        </button>
+                        <button class="fab-option" id="add-folder-fab-btn" data-tooltip="Créer un dossier">
+                            <i class="fas fa-folder-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="tab-content" id="stats">
+                <h2 class="section-title"><i class="fas fa-chart-line"></i> Tableau de bord</h2>
+                <div class="stats-container" id="stats-cards-container"></div>
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>Répartition des produits par catégorie</h3>
+                        <div class="chart-placeholder" id="category-chart"></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="stat-highlight-card">
+                            <h3>Valeur Totale du Stock</h3>
+                            <div class="value-container">
+                                <i class="fas fa-euro-sign"></i>
+                                <span id="total-stock-value">0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal" id="edit-modal">
+        <div class="modal-content"><div class="modal-header"><h3>Modifier le produit</h3><button class="close" aria-label="Fermer">&times;</button></div><div class="modal-body"></div></div>
+    </div>
+    
+    <div class="modal" id="add-photos-modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Ajouter des photos</h3><button class="close" aria-label="Fermer">&times;</button></div>
+            <div class="modal-body">
+                <div class="upload-option" id="modal-local-folder">
+                    <i class="fas fa-folder-open"></i><h3>Sélectionner des images</h3><p>Ajouter depuis votre ordinateur</p>
+                    <input type="file" id="modal-file-input" multiple accept="image/*" class="hidden">
+                </div>
+                <div class="preview-grid" id="modal-preview-container-photos"></div>
+                <button class="btn btn-finish" id="save-photos-btn"><i class="fas fa-save"></i> Enregistrer les photos</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="create-folder-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Créer un nouveau dossier</h3>
+                <button class="close" aria-label="Fermer">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="create-folder-form" novalidate>
+                    <div class="form-group">
+                        <label for="folder-name">Nom du dossier</label>
+                        <input type="text" id="folder-name" placeholder="Ex: Vestes en cuir" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary close-modal-btn">Annuler</button>
+                        <button type="submit" class="btn btn-finish">Créer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="add-product-modal">
+        <div class="modal-content modal-lg">
+             <div class="modal-header">
+                <h3>Ajouter un nouveau produit</h3>
+                <button class="close" aria-label="Fermer">&times;</button>
+            </div>
+            <div class="modal-body">
+                 <div class="form-container">
+                    <div class="image-preview">
+                        <h3 class="section-title"><i class="fas fa-images"></i> Aperçu</h3>
+                        <div class="preview-grid" id="modal-preview-container">
+                           <div class="placeholder-preview">
+                                <i class="fas fa-camera"></i><p>Ajoutez des images.</p>
+                           </div>
+                        </div>
+                        <div class="upload-option-small" id="modal-local-folder-trigger">
+                            <i class="fas fa-folder-open"></i> Parcourir...
+                            <input type="file" id="modal-file-input-trigger" multiple accept="image/*" class="hidden">
+                        </div>
+                    </div>
+
+                    <div class="item-form">
+                        <h3 class="section-title"><i class="fas fa-tags"></i> Détails</h3>
+                        <form id="modal-product-form" novalidate>
+                            </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification-container"></div>
+    <datalist id="datalist-textile-sizes"> <option value="XXS (FR 34)"></option> <option value="XS (FR 36)"></option> <option value="S (FR 38)"></option> <option value="M (FR 40)"></option> <option value="L (FR 42)"></option> <option value="XL (FR 44)"></option> <option value="XXL (FR 46)"></option> <option value="XXXL (FR 48)"></option> <option value="Taille unique"></option> </datalist>
+    <datalist id="datalist-shoe-sizes"> <option value="35"></option> <option value="36"></option> <option value="37"></option> <option value="38"></option> <option value="39"></option> <option value="40"></option> <option value="41"></option> <option value="42"></option> <option value="43"></option> <option value="44"></option> <option value="45"></option> <option value="46"></option> <option value="47"></option> <option value="48"></option> </datalist>
+
+    <script src="script.js"></script>
+</body>
+</html>
