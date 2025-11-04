@@ -293,42 +293,106 @@ input:checked + .slider:before { transform: translateX(24px); }
 
 
 /* ==========================================
-   Correction visuelle bouton Google Login
-   (Ceci est votre code, qui remplace l'ancienne modification)
+   REDESIGN - Bouton de Connexion Google Unique
    ========================================== */
-.login-box .btn {
+
+/* Conteneur principal du nouveau bouton */
+.google-login-button-unique {
+    /* Utilisation des variables CSS de votre site */
+    background-color: var(--light); /* Fond crème, comme le header */
+    border: 2px solid var(--border-color); /* Bordure orange pâle */
+    color: var(--dark); /* Texte brun foncé */
+    
     width: 100%;
-    background-color: var(--primary);
-    color: var(--white);
-    border: none;
-    border-radius: 8px;
-    padding: 14px 20px;
+    border-radius: 12px; /* Cohérent avec le design (12px) */
+    padding: 10px 15px;
     font-size: 16px;
-    font-weight: 600;
+    
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    transition: background-color 0.3s, opacity 0.3s;
-    box-shadow: var(--shadow);
+    gap: 12px; /* Espace entre l'icône et le texte */
+    
+    box-shadow: var(--shadow); /* Ombre légère de votre thème */
+    transition: all 0.3s ease;
+    cursor: pointer;
 }
 
-/* Désactive le saut au survol */
-.login-box .btn:hover {
-    transform: none;
-    opacity: 0.9;
-    background-color: var(--secondary);
+/* Animation au survol */
+.google-login-button-unique:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg); /* Ombre plus prononcée */
+    border-color: var(--primary); /* Bordure orange vif */
+    background-color: var(--white);
 }
 
-/* Stabilise l’icône Google */
-.login-box .btn i.fab {
-    font-size: 1.2em;
-    line-height: 1;
-    vertical-align: middle;
+/* Conteneur pour les icônes (Votre Logo FMR + 'G') */
+.google-login-icon-wrapper {
+    position: relative; /* Permet la superposition */
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0; /* Empêche l'icône de s'écraser */
 }
 
-/* Évite le fond orange en double (icône G) */
-.login-box .btn i.fab.fa-google {
-    background: transparent !important;
-    color: white !important;
+/* Votre logo FMR (le chérubin) */
+.google-login-brand-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    /* Légère bordure pour le détacher */
+    border: 2px solid var(--white);
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
 }
+
+/* Icône 'G' de Google en superposition */
+.google-login-g-icon {
+    position: absolute;
+    bottom: -2px; /* Position en bas à droite */
+    right: -4px;
+    
+    /* Cercle de fond pour l'icône 'G' */
+    background-color: #4285F4; /* Bleu Google officiel */
+    color: white;
+    
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    
+    /* Centrage de l'icône 'G' */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    font-size: 11px;
+    /* Bordure pour détacher l'icône 'G' de votre logo */
+    border: 2px solid var(--light); 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* Texte du bouton */
+.google-login-text {
+    font-weight: 700;
+    color: var(--secondary); /* Texte orange foncé (variable de votre site) */
+    letter-spacing: 0.5px;
+}
+
+/* Ajustements pour le Thème Sombre (Dark Mode) */
+body[data-theme="dark"] .google-login-button-unique {
+    background-color: var(--white); /* Fond noir (votre variable --white en dark) */
+    border-color: var(--border-color); 
+    color: var(--dark); 
+}
+
+body[data-theme="dark"] .google-login-button-unique:hover {
+    background-color: var(--light); /* Fond gris foncé (votre variable --light) */
+    border-color: var(--primary);
+}
+
+body[data-theme="dark"] .google-login-g-icon {
+    border-color: var(--light); /* Détachement sur fond sombre */
+}
+
+/* ==========================================
+   FIN DU REDESIGN
+   ========================================== */
