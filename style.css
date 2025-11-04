@@ -273,36 +273,6 @@ input:checked + .slider:before { transform: translateX(24px); }
     margin-bottom: 25px;
 }
 
-/* ==========================================================
-   MODIFICATION: Redesign Bouton Connexion Google
-   ========================================================== */
-
-/* Cible les boutons spécifiques dans la popup de connexion */
-.login-box .btn {
-    width: 100%;
-    
-    /* Force l'alignement flex pour l'icône et le texte */
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px; /* Un peu plus d'espace */
-    
-    /* Annule la transition de transformation qui cause le glitch */
-    transition: background-color 0.3s, opacity 0.3s;
-}
-
-/* Annule l'animation de "saut" (translateY) spécifiquement pour les boutons de la login-box */
-.login-box .btn:hover {
-    transform: none; /* Annule le 'translateY(-2px)' de la règle .btn:hover */
-    opacity: 0.9; /* Ajoute un feedback de survol stable */
-}
-
-/* Stabilise l'icône Google */
-.login-box .btn i.fab {
-    font-size: 1.1em; /* Légèrement plus grand */
-    line-height: 1;   /* Hauteur de ligne stable pour éviter tout décalage */
-}
-
 .login-box input {
     width: 100%;
     padding: 12px 15px;
@@ -320,3 +290,45 @@ input:checked + .slider:before { transform: translateX(24px); }
 @media (max-width: 1200px) { .charts-container { grid-template-columns: 1fr; } }
 @media (max-width: 992px) { .form-container, .upload-options, .variant-row { grid-template-columns: 1fr; } .variant-row { gap: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); } .variant-row:last-child { border-bottom: none; } .stock-controls { flex-direction: column; align-items: stretch; } }
 @media (max-width: 768px) { .header-content { flex-direction: column; gap: 15px; } nav ul { flex-wrap: wrap; justify-content: center; } }
+
+
+/* ==========================================
+   Correction visuelle bouton Google Login
+   (Ceci est votre code, qui remplace l'ancienne modification)
+   ========================================== */
+.login-box .btn {
+    width: 100%;
+    background-color: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    padding: 14px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: background-color 0.3s, opacity 0.3s;
+    box-shadow: var(--shadow);
+}
+
+/* Désactive le saut au survol */
+.login-box .btn:hover {
+    transform: none;
+    opacity: 0.9;
+    background-color: var(--secondary);
+}
+
+/* Stabilise l’icône Google */
+.login-box .btn i.fab {
+    font-size: 1.2em;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+/* Évite le fond orange en double (icône G) */
+.login-box .btn i.fab.fa-google {
+    background: transparent !important;
+    color: white !important;
+}
