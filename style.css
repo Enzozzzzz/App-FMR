@@ -293,60 +293,57 @@ input:checked + .slider:before { transform: translateX(24px); }
 
 
 /* ==========================================
-   REDESIGN - Bouton de Connexion Google (Standard)
+   REDESIGN - Bouton de Connexion (Style Uiverse)
    ========================================== */
 
-/* Conteneur principal du bouton */
-.google-login-button-standard {
-    /* Utilisation des variables de votre thème */
-    background-color: var(--white);
-    border: 2px solid var(--border-color);
-    width: 100%;
-    border-radius: 12px;
-    padding: 12px 15px;
-    font-size: 16px;
+.google-login-uiverse {
+    /* Adapté du style Uiverse */
+    width: 100%; /* S'adapte au conteneur .login-box */
     display: flex;
+    padding: 0.5rem 1.4rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    vertical-align: middle;
     align-items: center;
-    justify-content: center;
-    gap: 12px; /* Espace entre icône et texte */
-    box-shadow: var(--shadow);
-    transition: all 0.3s ease;
+    justify-content: center; /* Centrer le contenu */
+    border-radius: 0.5rem;
+    gap: 0.75rem;
     cursor: pointer;
+    transition: all .6s ease;
+
+    /* Intégration au thème FMR */
+    border: 1px solid var(--border-color);
+    color: var(--dark);
+    background-color: var(--white);
+    box-shadow: var(--shadow);
 }
 
-/* Animation au survol */
-.google-login-button-standard:hover {
-    transform: translateY(-2px);
+.google-login-uiverse svg {
+    height: 24px;
+}
+
+.google-login-uiverse:hover {
+    /* Effet Uiverse */
+    transform: scale(1.02);
+    /* Effets FMR */
+    border-color: var(--primary);
     box-shadow: var(--shadow-lg);
-    border-color: var(--primary); /* Bordure orange vif */
-    background-color: var(--light); /* Fond crème léger */
-}
-
-/* Icône Google */
-.google-login-button-standard .google-icon {
-    font-size: 20px;
-    color: #4285F4; /* Bleu Google officiel */
-}
-
-/* Texte du bouton */
-.google-login-button-standard .google-login-text {
-    color: var(--dark); /* Texte brun foncé */
-    font-weight: 600;
+    background-color: var(--light);
 }
 
 /* Ajustements Thème Sombre */
-body[data-theme="dark"] .google-login-button-standard {
-    background-color: var(--white); /* Fond noir (thème) */
-    border-color: var(--border-color);
+body[data-theme="dark"] .google-login-uiverse {
+    border: 1px solid var(--border-color);
+    color: var(--dark);
+    background-color: var(--white);
 }
 
-body[data-theme="dark"] .google-login-button-standard:hover {
-    background-color: var(--light); /* Fond gris (thème) */
-    border-color: var(--primary);
-}
-
-body[data-theme="dark"] .google-login-button-standard .google-login-text {
-    color: var(--dark); /* Texte clair (thème) */
+body[data-theme="dark"] .google-login-uiverse:hover {
+     border-color: var(--primary);
+     background-color: var(--light);
 }
 
 /* ==========================================
