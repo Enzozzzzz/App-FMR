@@ -235,7 +235,7 @@ input:checked + .slider:before { transform: translateX(24px); }
 .no-products { grid-column: 1 / -1; text-align: center; padding: 50px; background-color: var(--light); border-radius: 12px; color: var(--gray); }
 
 
-/* NOUVEAU: Styles pour les écrans de connexion */
+/* Styles pour les écrans de connexion */
 .login-overlay {
     position: fixed;
     top: 0;
@@ -285,7 +285,7 @@ input:checked + .slider:before { transform: translateX(24px); }
     color: var(--dark);
     margin-bottom: 15px;
 }
-/* FIN Nouveaux Styles */
+/* FIN Styles pour les écrans de connexion */
 
 
 /* Responsive */
