@@ -80,7 +80,22 @@ input:checked + .slider:before { transform: translateX(24px); }
 .btn-add-variant { background: none; border: 2px dashed var(--border-color); color: var(--primary); width: 100%; padding: 10px; border-radius: 8px; cursor: pointer; transition: all 0.3s; font-weight: 600; }
 .btn-add-variant:hover { background-color: var(--light); border-color: var(--primary); }
 .btn-remove-variant { background-color: var(--danger); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; line-height: 1; }
-.btn { padding: 12px 25px; color: var(--white); border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.btn {
+    padding: 12px 25px;
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s; /* Garde la transition pour le bouton */
+    
+    /* MODIFICATION : S'assurer que les propriétés d'alignement sont robustes */
+    display: inline-flex;
+    align-items: center; /* Centre verticalement les éléments à l'intérieur */
+    justify-content: center; /* Centre horizontalement les éléments à l'intérieur */
+    gap: 8px; /* Espace entre l'icône et le texte */
+}
 .btn:hover { transform: translateY(-2px); }
 .btn-finish { background-color: var(--primary); width: 100%; margin-top: 20px; }
 .btn-finish:hover { background-color: var(--secondary); }
