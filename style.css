@@ -80,6 +80,8 @@ input:checked + .slider:before { transform: translateX(24px); }
 .btn-add-variant { background: none; border: 2px dashed var(--border-color); color: var(--primary); width: 100%; padding: 10px; border-radius: 8px; cursor: pointer; transition: all 0.3s; font-weight: 600; }
 .btn-add-variant:hover { background-color: var(--light); border-color: var(--primary); }
 .btn-remove-variant { background-color: var(--danger); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; line-height: 1; }
+
+/* Règle .btn globale pour l'alignement */
 .btn {
     padding: 12px 25px;
     color: var(--white);
@@ -88,15 +90,17 @@ input:checked + .slider:before { transform: translateX(24px); }
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s; /* Garde la transition pour le bouton */
+    transition: all 0.3s;
     
-    /* MODIFICATION : S'assurer que les propriétés d'alignement sont robustes */
+    /* C'est ce qui aligne l'icône et le texte */
     display: inline-flex;
-    align-items: center; /* Centre verticalement les éléments à l'intérieur */
-    justify-content: center; /* Centre horizontalement les éléments à l'intérieur */
-    gap: 8px; /* Espace entre l'icône et le texte */
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
-.btn:hover { transform: translateY(-2px); }
+.btn:hover {
+    transform: translateY(-2px); /* Animation de "saut" */
+}
 .btn-finish { background-color: var(--primary); width: 100%; margin-top: 20px; }
 .btn-finish:hover { background-color: var(--secondary); }
 .btn-export { background-color: #43aa8b; }
@@ -307,3 +311,33 @@ input:checked + .slider:before { transform: translateX(24px); }
 @media (max-width: 1200px) { .charts-container { grid-template-columns: 1fr; } }
 @media (max-width: 992px) { .form-container, .upload-options, .variant-row { grid-template-columns: 1fr; } .variant-row { gap: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); } .variant-row:last-child { border-bottom: none; } .stock-controls { flex-direction: column; align-items: stretch; } }
 @media (max-width: 768px) { .header-content { flex-direction: column; gap: 15px; } nav ul { flex-wrap: wrap; justify-content: center; } }
+
+
+/* ==========================================================
+   MODIFICATION: Redesign Bouton Connexion Google
+   Supprime l'animation "translateY" et force l'alignement.
+   ========================================================== */
+
+/* Cible les boutons spécifiques dans la popup de connexion */
+.login-box .btn {
+    /* 1. Force l'alignement de l'icône et du texte */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px; /* Espace un peu plus grand */
+
+    /* 2. Annule la transition de transformation qui pose problème */
+    transition: background-color 0.3s, opacity 0.3s;
+}
+
+/* 3. Supprime le mouvement vertical ("saut") au survol */
+.login-box .btn:hover {
+    transform: none; /* Annule le 'translateY(-2px)' de la règle .btn:hover */
+    opacity: 0.9; /* Ajoute un feedback de survol simple */
+}
+
+/* 4. Stabilise l'icône Google */
+.login-box .btn i.fab {
+    font-size: 1.1em; /* Légèrement plus grand */
+    line-height: 1;   /* Hauteur de ligne stable pour éviter tout décalage */
+}
