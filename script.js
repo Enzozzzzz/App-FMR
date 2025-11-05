@@ -569,7 +569,7 @@
 
     function buildImportTabForm() {
         if (!spreadsheetDetails) {
-            importFormContainer.innerHTML = '<h2 class="section-title"><i class="fas fa-file-import"></i> Ajouter un produit</h2><p>Veuillez d'abord charger une Spreadsheet dans l\'onglet "Inventaire".</p>';
+            importFormContainer.innerHTML = '<h2 class="section-title"><i class="fas fa-file-import"></i> Ajouter un produit</h2><p>Veuillez d\'abord charger une Spreadsheet dans l\'onglet "Inventaire".</p>';
             return;
         }
         
