@@ -6,30 +6,54 @@
    - Les formulaires sont 100% dynamiques, basés sur les en-têtes (Ligne 1).
    ======================================================================== */
 
-   document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
+
+    // Variables d'état pour le chargement des API
+    let gapiReady = false;
+    let gisReady = false;
+    let onLoginCallback = null;
 
     // ======================= GESTIONNAIRE GOOGLE API ======================= //
     const googleApiManager = {
         // ⚠️ REMPLISSEZ VOTRE CLÉ API CI-DESSOUS ⚠️
-        API_KEY: 'AIzaSyCQvxSnvvQy_SMHAwahEFKceXXbKcE9ljg', 
+        API_KEY: 'AIzaSyCQvxSnvvQy_SMHAwahEFKceXXbKcE9ljg',
         CLIENT_ID: '539526644294-d6jju7s5artqk518ptt3t27laih4i7qg.apps.googleusercontent.com',
 
         gapi: null,
         gis: null,
         tokenClient: null,
-        
+
+        // initClient stocke juste le callback maintenant.
         initClient: (onLoginStatusChange) => {
-            try {
-                gapi.load('client', async () => {
+            onLoginCallback = onLoginStatusChange;
+        },
+
+        // Appelée par <script onload="gapiClientLoaded()"> depuis index.html
+        gapiClientLoaded: () => {
+            gapi.load('client', async () => {
+                try {
                     await gapi.client.init({
                         apiKey: googleApiManager.API_KEY,
                         discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
                     });
                     googleApiManager.gapi = gapi;
-                    const token = gapi.client.getToken();
-                    onLoginStatusChange(token !== null);
-                });
+                    gapiReady = true;
+                    googleApiManager.checkAllReady();
+                } catch (err) {
+                    console.error("Erreur d'init GAPI client", err);
+                    showNotification("Erreur de chargement GAPI", "error");
+                }
+            });
+        },
 
+        // Appelée par <script onload="gisClientLoaded()"> depuis index.html
+        gisClientLoaded: () => {
+            try {
+                if (!window.google || !window.google.accounts) {
+                    console.error("GIS chargé, mais window.google.accounts n'est pas dispo.");
+                    showNotification("Erreur critique de l'API Google", "error");
+                    return;
+                }
                 googleApiManager.gis = window.google.accounts;
                 googleApiManager.tokenClient = googleApiManager.gis.oauth2.initTokenClient({
                     client_id: googleApiManager.CLIENT_ID,
@@ -38,16 +62,26 @@
                         if (tokenResponse.error) {
                             console.error("Erreur de token:", tokenResponse.error);
                             showNotification("Échec de l'autorisation", "error");
-                            onLoginStatusChange(false);
+                            if (onLoginCallback) onLoginCallback(false);
                             return;
                         }
-                        onLoginStatusChange(true);
+                        if (onLoginCallback) onLoginCallback(true);
                         showNotification("Connecté à Google", "success");
                     },
                 });
+                gisReady = true;
+                googleApiManager.checkAllReady();
             } catch (e) {
-                console.error("Erreur d'init GAPI/GIS", e);
-                showNotification("Erreur de chargement des API Google", "error");
+                console.error("Erreur d'init GIS client", e);
+                showNotification("Erreur de chargement des API Google (GIS)", "error");
+            }
+        },
+
+        // Vérifie si les deux API sont prêtes avant de continuer
+        checkAllReady: () => {
+            if (gapiReady && gisReady && onLoginCallback) {
+                const token = googleApiManager.gapi.client.getToken();
+                onLoginCallback(token !== null);
             }
         },
 
@@ -95,7 +129,7 @@
                 return null;
             }
         },
-        
+
         appendRow: async (spreadsheetId, range, values) => {
             if (!googleApiManager.gapi || !googleApiManager.gapi.client.getToken()) return null;
             try {
@@ -173,16 +207,18 @@
         },
 
         renameSheet: async (spreadsheetId, sheetId, newTitle) => {
-             if (!googleApiManager.gapi || !googleApiManager.gapi.client.getToken()) return null;
-             try {
+            if (!googleApiManager.gapi || !googleApiManager.gapi.client.getToken()) return null;
+            try {
                 await googleApiManager.gapi.client.sheets.spreadsheets.batchUpdate({
                     spreadsheetId: spreadsheetId,
-                    resource: { requests: [{ 
-                        updateSheetProperties: {
-                            properties: { sheetId: sheetId, title: newTitle },
-                            fields: 'title'
-                        }
-                    }] }
+                    resource: {
+                        requests: [{
+                            updateSheetProperties: {
+                                properties: { sheetId: sheetId, title: newTitle },
+                                fields: 'title'
+                            }
+                        }]
+                    }
                 });
                 showNotification(`Onglet renommé: "${newTitle}"`, "success");
                 return true;
@@ -209,7 +245,7 @@
     const fabBtn = document.getElementById('fab-add-btn');
     const addFolderFabBtn = document.getElementById('add-folder-fab-btn');
     const addProductFabBtn = document.getElementById('add-product-fab-btn');
-    
+
     // --- ÉLÉMENTS AUTH & PROMPT ---
     const loginOverlay = document.getElementById('login-overlay');
     const sheetPrompt = document.getElementById('sheet-prompt');
@@ -250,6 +286,10 @@
 
     // ======================= INITIALISATION DE L'APP ======================= //
     function initializeApp() {
+        // Expose les callbacks à 'window' pour que index.html puisse les appeler
+        window.gapiClientLoaded = googleApiManager.gapiClientLoaded;
+        window.gisClientLoaded = googleApiManager.gisClientLoaded;
+
         setupGlobalEventListeners();
         googleApiManager.initClient(handleLoginStatusChange);
     }
@@ -271,7 +311,7 @@
     }
 
     // ======================= GESTION AUTH & SPREADSHEET ======================= //
-    
+
     function handleLoginStatusChange(loggedIn) {
         isLoggedIn = loggedIn;
         if (loggedIn) {
@@ -311,7 +351,7 @@
             spreadsheetDetails = details;
             sheetPrompt.classList.add('hidden');
             appContainer.style.display = 'block';
-            
+
             currentView = 'sheets';
             renderCurrentView();
             updateBreadcrumbs();
@@ -346,19 +386,19 @@
         document.getElementById(tabName).classList.add('active');
 
         fabContainer.style.display = (tabName === 'stock') ? 'block' : 'none';
-        
+
         if (tabName === 'stock') {
-            renderCurrentView(); 
+            renderCurrentView();
         } else if (tabName === 'stats') {
             updateStatistics();
         } else if (tabName === 'import') {
             buildImportTabForm();
         }
     }
-    
+
     function renderCurrentView() {
         if (!document.getElementById('stock').classList.contains('active')) return;
-        
+
         if (currentView === 'sheets') {
             renderSheetListView();
         } else if (currentView === 'products') {
@@ -385,7 +425,7 @@
             return;
         }
         const rootName = spreadsheetDetails?.properties?.title || 'Spreadsheet';
-        
+
         if (currentView === 'sheets') {
             breadcrumbs.innerHTML = `<span class="current-folder">${rootName}</span>`;
             stockTitle.innerHTML = `<i class="fas fa-book"></i> ${rootName}`;
@@ -398,7 +438,7 @@
             stockTitle.innerHTML = `<i class="fas fa-folder-open"></i> ${currentSheet.title}`;
         }
     }
-    
+
     breadcrumbs.addEventListener('click', (e) => {
         if (e.target.dataset.nav === 'root') {
             e.preventDefault();
@@ -414,7 +454,7 @@
             inventoryGrid.innerHTML = '<div class="no-products"><p>Aucun onglet trouvé.</p></div>';
             return;
         }
-        
+
         // Rafraîchir les détails au cas où des produits ont été ajoutés
         const details = await googleApiManager.getSpreadsheetDetails(currentSpreadsheetId);
         if (details) spreadsheetDetails = details;
@@ -428,7 +468,7 @@
             card.className = 'folder-card';
             card.dataset.sheetTitle = sheet.properties.title;
             card.dataset.sheetId = sheet.properties.sheetId;
-            
+
             // Tente d'estimer le nombre de produits (rowCount - 1 pour l'en-tête)
             const productCount = (sheet.properties.gridProperties.rowCount || 1) - 1;
 
@@ -455,7 +495,7 @@
     async function renderProductListView() {
         if (!currentSheet) return;
         inventoryGrid.innerHTML = '<div class="no-products"><p>Chargement des produits...</p></div>';
-        
+
         const range = `${currentSheet.title}!A:Z`;
         const data = await googleApiManager.getSheetData(currentSpreadsheetId, range);
 
@@ -467,19 +507,19 @@
         }
 
         currentHeaders = data.shift();
-        
+
         currentData = data.map((row, index) => {
             const obj = {};
             currentHeaders.forEach((header, i) => {
                 obj[header] = row[i];
             });
-            obj.gSheetRowIndex = index + 2; 
+            obj.gSheetRowIndex = index + 2;
             return obj;
         });
-        
+
         const searchText = searchInput.value.toLowerCase();
         const filteredData = currentData.filter(item => {
-            return Object.values(item).some(val => 
+            return Object.values(item).some(val =>
                 String(val).toLowerCase().includes(searchText)
             );
         });
@@ -493,7 +533,7 @@
         filteredData.forEach(item => {
             const card = document.createElement('div');
             card.className = 'product-card';
-            card.dataset.rowIndex = item.gSheetRowIndex; 
+            card.dataset.rowIndex = item.gSheetRowIndex;
             card.innerHTML = createDynamicProductCardHTML(item, currentHeaders);
             inventoryGrid.appendChild(card);
         });
@@ -514,16 +554,16 @@
         const type = item[typeKey] || '';
         const status = item[statusKey] || '';
         const sourcing = item[sourcingKey] || '';
-        
+
         let imageUrl = 'https://via.placeholder.com/400x300/cccccc/ffffff?text=Image';
         if (item[imageKey]) {
             imageUrl = item[imageKey].split(',')[0].trim();
         }
-        
+
         let detailsHTML = '';
         headers.forEach(header => {
             if (![nameKey, descKey, priceKey, typeKey, statusKey, imageKey, sourcingKey, 'gSheetRowIndex'].includes(header)) {
-                if(item[header]) { 
+                if (item[header]) {
                     detailsHTML += `<div><span>${header}:</span><span>${item[header]}</span></div>`;
                 }
             }
@@ -572,8 +612,8 @@
             importFormContainer.innerHTML = '<h2 class="section-title"><i class="fas fa-file-import"></i> Ajouter un produit</h2><p>Veuillez d\'abord charger une Spreadsheet dans l\'onglet "Inventaire".</p>';
             return;
         }
-        
-        let sheetOptions = spreadsheetDetails.sheets.map(sheet => 
+
+        let sheetOptions = spreadsheetDetails.sheets.map(sheet =>
             `<option value="${sheet.properties.title}">${sheet.properties.title}</option>`
         ).join('');
 
@@ -584,7 +624,7 @@
 
         select.innerHTML = `<option value="">Sélectionnez un onglet...</option>${sheetOptions}`;
         select.disabled = false;
-        
+
         let importHeaders = [];
 
         select.onchange = async (e) => {
@@ -594,10 +634,10 @@
                 submitBtn.disabled = true;
                 return;
             }
-            
+
             const range = `${sheetTitle}!A1:Z1`;
             const headers = await googleApiManager.getSheetData(currentSpreadsheetId, range);
-            
+
             if (headers && headers.length > 0) {
                 importHeaders = headers[0];
                 fieldsContainer.innerHTML = buildDynamicFormHTML(importHeaders);
@@ -638,7 +678,7 @@
             showNotification("Ce dossier (onglet) est vide. Ajoutez des en-têtes (Ligne 1) d'abord.", "error");
             return;
         }
-        
+
         const modalBody = addProductModal.querySelector('.modal-body');
         modalBody.innerHTML = `
             <form id="modal-product-form" novalidate>
@@ -651,12 +691,12 @@
                 </div>
             </form>
         `;
-        
+
         const form = document.getElementById('modal-product-form');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!form.checkValidity()) { form.reportValidity(); return; }
-            
+
             const newRowData = currentHeaders.map((header, i) => {
                 const fieldId = `dyn-${i}`;
                 return form.elements[fieldId].value;
@@ -699,17 +739,17 @@
                 const fieldId = `dyn-${i}`;
                 return form.elements[fieldId].value;
             });
-            
+
             const endColumn = String.fromCharCode(64 + currentHeaders.length); // 65 = 'A'
             const range = `${currentSheet.title}!A${rowIndex}:${endColumn}${rowIndex}`;
 
             const success = await googleApiManager.updateRow(currentSpreadsheetId, range, updatedRowData);
             if (success) {
                 closeModal(editModal);
-                renderProductListView(); 
+                renderProductListView();
             }
         });
-        
+
         editModal.style.display = 'block';
     }
 
@@ -718,7 +758,7 @@
             const fieldId = `dyn-${i}`;
             const value = data ? (data[header] || '') : '';
             const headerLower = header.toLowerCase();
-            
+
             let inputHTML;
             if (headerLower.includes('description')) {
                 inputHTML = `<textarea id="${fieldId}" name="${header}" rows="3" placeholder="${header}...">${value}</textarea>`;
@@ -729,7 +769,7 @@
                 } else if (headerLower.includes('date')) {
                     inputType = "date";
                 }
-                
+
                 inputHTML = `<input type="${inputType}" id="${fieldId}" name="${header}" value="${value}"
                        placeholder="${header}..." ${inputType === 'number' ? 'step="any"' : ''} required>`;
             }
@@ -781,10 +821,10 @@
                 }
             }
         }
-        
+
         if (card.classList.contains('product-card')) {
             const rowIndex = parseInt(card.dataset.rowIndex, 10);
-            
+
             if (action === 'edit-product') {
                 openEditProductModal(rowIndex);
             }
@@ -797,12 +837,12 @@
             if (action === 'confirm-delete-product') {
                 const success = await googleApiManager.deleteRow(currentSpreadsheetId, currentSheet.id, rowIndex);
                 if (success) {
-                    renderProductListView(); 
+                    renderProductListView();
                 }
             }
         }
     }
-    
+
     async function handleAddSheet(e) {
         e.preventDefault();
         const input = document.getElementById('sheet-name');
@@ -823,21 +863,21 @@
         const statsContainer = document.getElementById('stats-cards-container');
         const categoryChart = document.getElementById('category-chart');
         const totalValueEl = document.getElementById('total-stock-value');
-        
+
         if (!currentData || currentData.length === 0) {
             statsContainer.innerHTML = "<p>Chargez un onglet dans l'inventaire pour voir les statistiques.</p>";
             categoryChart.innerHTML = '';
             totalValueEl.textContent = '0,00';
             return;
         }
-        
+
         const typeKey = currentHeaders.find(h => h.toLowerCase().includes('type') || h.toLowerCase().includes('catégorie'));
         const priceKey = currentHeaders.find(h => h.toLowerCase().includes('prix'));
         const quantityKey = currentHeaders.find(h => h.toLowerCase().includes('quantité'));
 
         let totalValue = 0;
         const stats = {};
-        
+
         currentData.forEach(p => {
             let quantity = (quantityKey && p[quantityKey]) ? parseInt(p[quantityKey], 10) : 1;
             let price = (priceKey && p[priceKey]) ? parseFloat(p[priceKey]) : 0;
@@ -849,16 +889,16 @@
             }
         });
 
-        statsContainer.innerHTML = Object.entries(stats).map(([type, count]) => 
+        statsContainer.innerHTML = Object.entries(stats).map(([type, count]) =>
             `<div class="stat-card"><div class="stat-info">
              <h3>${type}</h3><span class="stat-value">${count}</span>
              </div></div>`
         ).join('');
-        
+
         totalValueEl.textContent = `${totalValue.toFixed(2).replace('.', ',')}`;
-        
+
         const maxStat = Math.max(...Object.values(stats), 1);
-        categoryChart.innerHTML = Object.entries(stats).map(([type, count]) => 
+        categoryChart.innerHTML = Object.entries(stats).map(([type, count]) =>
             `<div class="chart-bar ${type.toLowerCase()}" style="--bar-height: ${(count / maxStat) * 100}%" data-label="${type}">
              <span>${count}</span></div>`
         ).join('');
@@ -880,11 +920,11 @@
         container.appendChild(notif);
         setTimeout(() => notif.remove(), 4000);
     }
-    
-    function closeModal(modal) { 
-        if (modal) modal.style.display = 'none'; 
+
+    function closeModal(modal) {
+        if (modal) modal.style.display = 'none';
         const modalBody = modal.querySelector('.modal-body');
-        if(modalBody) modalBody.innerHTML = ''; // Vider le contenu
+        if (modalBody) modalBody.innerHTML = ''; // Vider le contenu
     }
 
     // --- DÉMARRAGE ---
