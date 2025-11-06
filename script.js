@@ -20,7 +20,7 @@ let onLoginCallback = null;
 // ======================= GESTIONNAIRE GOOGLE API ======================= //
 const googleApiManager = {
     // ⚠️ REMPLISSEZ VOTRE CLÉ API CI-DESSOUS ⚠️
-    API_KEY: 'AIzaSyCQvxSnvvQy_SMHAwahEFKceXXbKcE9ljg',
+    API_KEY: 'AIzaSyCW7NcKb1euepVEb4zP688gjMRq_C7_XNU',
     CLIENT_ID: '539526644294-d6jju7s5artqk518ptt3t27laih4i7qg.apps.googleusercontent.com',
 
     gapi: null,
