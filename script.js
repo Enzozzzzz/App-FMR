@@ -20,7 +20,7 @@ let tokenClient = null; // ‼‼ MODIFICATION: Déplacé hors du manager
 
 // ======================= GESTIONNAIRE GOOGLE API ======================= //
 const googleApiManager = {
-    API_KEY: 'METTEZ_VOTRE_NOUVELLE_CLE_API_ICI', // [c'est la clé que vous venez de créer]
+    API_KEY: 'AIzaSyCW7NcKb1euepVEb4zP688gjMRq_C7_XNU', // [c'est la clé que vous venez de créer]
     CLIENT_ID: '539526644294-d6jju7s5artqk518ptt3t27laih4i7qg.apps.googleusercontent.com',
 
     gapi: null,
