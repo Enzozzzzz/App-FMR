@@ -2,7 +2,7 @@
    BACKROOM by FMR - v2.0 (Google Sheets Backend)
    ======================================================================== */
 
-// ‼‼ Callbacks globaux pour les scripts Google ‼‼
+// Callbacks globaux
 function gapiClientLoaded() {
     googleApiManager.gapiClientLoaded();
 }
@@ -16,15 +16,16 @@ function gisClientLoaded() {
 let gapiReady = false;
 let gisReady = false;
 let onLoginCallback = null;
+let tokenClient = null; // ‼‼ MODIFICATION: Déplacé hors du manager
 
 // ======================= GESTIONNAIRE GOOGLE API ======================= //
 const googleApiManager = {
-    API_KEY: 'AIzaSyCW7NcKb1euepVEb4zP688gjMRq_C7_XNU', 
+    API_KEY: 'METTEZ_VOTRE_NOUVELLE_CLE_API_ICI', // [c'est la clé que vous venez de créer]
     CLIENT_ID: '539526644294-d6jju7s5artqk518ptt3t27laih4i7qg.apps.googleusercontent.com',
 
     gapi: null,
     gis: null,
-    tokenClient: null,
+    // tokenClient a été déplacé hors d'ici
 
     initClient: (onLoginStatusChange) => {
         onLoginCallback = onLoginStatusChange;
@@ -62,22 +63,16 @@ const googleApiManager = {
                 return;
             }
             googleApiManager.gis = window.google.accounts;
-            googleApiManager.tokenClient = googleApiManager.gis.oauth2.initTokenClient({
+            
+            // ‼‼ MODIFICATION: Initialisation du Token Client
+            // Nous n'utilisons plus de 'callback' ici, car la réponse
+            // viendra par une redirection complète de la page.
+            tokenClient = googleApiManager.gis.oauth2.initTokenClient({
                 client_id: googleApiManager.CLIENT_ID,
                 scope: 'https://www.googleapis.com/auth/spreadsheets',
-                callback: (tokenResponse) => {
-                    if (onLoginCallback) {
-                        if (tokenResponse.error) {
-                            console.error("Erreur de token:", tokenResponse.error);
-                            showNotification("Échec de l'autorisation", "error");
-                            onLoginCallback(false);
-                            return;
-                        }
-                        showNotification("Connecté à Google", "success");
-                        onLoginCallback(true);
-                    }
-                },
+                callback: '', // Le callback est géré au chargement de la page
             });
+
             gisReady = true;
             googleApiManager.checkAllReady();
         } catch (e) {
@@ -90,14 +85,36 @@ const googleApiManager = {
 
     checkAllReady: () => {
         if (gapiReady && gisReady && onLoginCallback) {
-            const token = googleApiManager.gapi.client.getToken();
-            onLoginCallback(token !== null);
+            // ‼‼ MODIFICATION: Au lieu de juste vérifier le token,
+            // nous gérons la réponse de redirection s'il y en a une.
+            googleApiManager.gis.oauth2.handleRedirectResult(
+                (tokenResponse) => {
+                    // C'est ici qu'on atterrit APRES la redirection
+                    if (tokenResponse.error) {
+                        console.error("Erreur de token:", tokenResponse.error);
+                        showNotification("Échec de l'autorisation", "error");
+                        onLoginCallback(false);
+                        return;
+                    }
+                    // Connexion réussie via redirection
+                    showNotification("Connecté à Google", "success");
+                    onLoginCallback(true);
+                },
+                () => {
+                    // S'il n'y a pas de 'tokenResponse', on vérifie si on est déjà connecté
+                    const token = googleApiManager.gapi.client.getToken();
+                    onLoginCallback(token !== null);
+                }
+            );
         }
     },
 
+    // ‼‼ MODIFICATION: handleLogin lance la redirection
     handleLogin: () => {
-        if (googleApiManager.tokenClient) {
-            googleApiManager.tokenClient.requestAccessToken();
+        if (tokenClient) {
+            // Au lieu de 'requestAccessToken', on utilise 'requestAccessToken' avec 'hint'
+            // pour déclencher le flux de redirection
+            tokenClient.requestAccessToken({prompt: ''});
         }
     },
 
@@ -112,8 +129,8 @@ const googleApiManager = {
         }
     },
 
+    // ... (le reste du fichier : API CALLS, ÉLÉMENTS DU DOM, etc. est identique) ...
     // --- API CALLS ---
-    // [ ... toutes les fonctions API (getSpreadsheetDetails, etc.) restent identiques ... ]
     getSpreadsheetDetails: async (spreadsheetId) => {
         if (!googleApiManager.gapi || !googleApiManager.gapi.client.getToken()) return null;
         try {
@@ -165,7 +182,7 @@ const googleApiManager = {
             await googleApiManager.gapi.client.sheets.spreadsheets.values.update({
                 spreadsheetId: spreadsheetId,
                 range: range,
-                valueInputOption: 'USER_ENTERED',
+                valueInputOption: 'USER_ENTERTERED',
                 resource: { values: [values] }
             });
             showNotification("Produit mis à jour !", "success");
@@ -955,7 +972,7 @@ function updateStatistics() {
 // ======================= UTILITAIRES ======================= //
 
 function createPicker() {
-    if (!googleApiManager.gapi || !googleApiManager.tokenClient) {
+    if (!googleApiManager.gapi || !tokenClient) { // Modifié de 'googleApiManager.tokenClient'
         showNotification("API Google non prête.", "error");
         return;
     }
