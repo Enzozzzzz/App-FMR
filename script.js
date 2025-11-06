@@ -6,7 +6,7 @@
    - Les formulaires sont 100% dynamiques, basés sur les en-têtes (Ligne 1).
    ======================================================================== */
 
-document.addEventListener('DOMContentLoaded', () => {
+// ❌ LIGNE "DOMContentLoaded" SUPPRIMÉE
 
     // Variables d'état pour le chargement des API
     let gapiReady = false;
@@ -1005,4 +1005,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- DÉMARRAGE ---
     initializeApp();
-});
+
+// ❌ LIGNE "DOMContentLoaded" FERMANTE SUPPRIMÉE
