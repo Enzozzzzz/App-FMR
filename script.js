@@ -19,8 +19,7 @@ let onLoginCallback = null;
 
 // ======================= GESTIONNAIRE GOOGLE API ======================= //
 const googleApiManager = {
-    // ⚠️ REMPLISSEZ VOTRE CLÉ API CI-DESSOUS ⚠️
-    API_KEY: 'AIzaSyCW7NcKb1euepVEb4zP688gjMRq_C7_XNU',
+    API_KEY: 'AIzaSyCW7NcKb1euepVEb4zP688gjMRq_C7_XNU', 
     CLIENT_ID: '539526644294-d6jju7s5artqk518ptt3t27laih4i7qg.apps.googleusercontent.com',
 
     gapi: null,
@@ -114,6 +113,7 @@ const googleApiManager = {
     },
 
     // --- API CALLS ---
+    // [ ... toutes les fonctions API (getSpreadsheetDetails, etc.) restent identiques ... ]
     getSpreadsheetDetails: async (spreadsheetId) => {
         if (!googleApiManager.gapi || !googleApiManager.gapi.client.getToken()) return null;
         try {
@@ -742,7 +742,6 @@ function openAddProductModal() {
     `;
 
     const form = document.getElementById('modal-product-form');
-    // ‼‼ CORRECTIONS APPLIQUÉES CI-DESSOUS ‼‼
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!form.checkValidity()) { form.reportValidity(); return; }
@@ -752,14 +751,13 @@ function openAddProductModal() {
             return form.elements[fieldId].value;
         });
 
-        // CORRECTION 1: Utilisation de 'currentSheet.title'
         const range = `${currentSheet.title}!A:A`;
         const success = await googleApiManager.appendRow(currentSpreadsheetId, range, newRowData);
         if (success) {
             closeModal(addProductModal);
             renderProductListView();
         }
-    }); // CORRECTION 2: Ajout de la parenthèse fermante ')'
+    });
 
     addProductModal.style.display = 'block';
 }
@@ -975,7 +973,8 @@ function createPicker() {
     const picker = new google.picker.PickerBuilder()
         .setAppId(googleApiManager.CLIENT_ID.split('-')[0])
         .setOAuthToken(token.access_token)
-        .setDeveloperKey(googleApiManager.API_KEY)
+        // ‼‼ CORRECTION: Nous supprimons la Clé API qui cause l'erreur 403 ‼‼
+        // .setDeveloperKey(googleApiManager.API_KEY) 
         .addView(view)
         .setCallback(pickerCallback)
         .build();
