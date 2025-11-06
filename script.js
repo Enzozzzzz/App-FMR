@@ -2,32 +2,17 @@
    BACKROOM by FMR - v2.0 (Google Sheets Backend)
    ======================================================================== */
 
-// ‼‼ CORRECTION: Définir les callbacks dans le scope global (window) ‼‼
-// Ces fonctions DOIVENT exister immédiatement pour que les scripts
-// Google dans le <head> puissent les appeler sans erreur.
-
-/**
- * Appelée par <script src="https://apis.google.com/js/api.js" ...>
- * Délègue l'appel au manager.
- */
+// ‼‼ Callbacks globaux pour les scripts Google ‼‼
 function gapiClientLoaded() {
-    // Appelle simplement la fonction du manager.
-    // Le manager gérera lui-même l'attente du DOM s'il le faut.
     googleApiManager.gapiClientLoaded();
 }
 
-/**
- * Appelée par <script src="https://accounts.google.com/gsi/client" ...>
- * Délègue l'appel au manager.
- */
 function gisClientLoaded() {
     googleApiManager.gisClientLoaded();
 }
 
-
 // ----- Le reste du script commence ici -----
 
-// Variables d'état pour le chargement des API
 let gapiReady = false;
 let gisReady = false;
 let onLoginCallback = null;
@@ -42,17 +27,13 @@ const googleApiManager = {
     gis: null,
     tokenClient: null,
 
-    // initClient stocke juste le callback maintenant.
-    // ‼‼ CORRECTION: Cette fonction sera appelée par initializeApp() ‼‼
     initClient: (onLoginStatusChange) => {
         onLoginCallback = onLoginStatusChange;
-        // Si GIS est déjà prêt (chargé avant le DOM), on re-vérifie
         if (gisReady) {
             googleApiManager.checkAllReady();
         }
     },
 
-    // Appelée par la fonction globale "gapiClientLoaded"
     gapiClientLoaded: () => {
         gapi.load('client:picker', async () => {
             try {
@@ -72,7 +53,6 @@ const googleApiManager = {
         });
     },
 
-    // Appelée par la fonction globale "gisClientLoaded"
     gisClientLoaded: () => {
         try {
             if (!window.google || !window.google.accounts) {
@@ -87,7 +67,6 @@ const googleApiManager = {
                 client_id: googleApiManager.CLIENT_ID,
                 scope: 'https://www.googleapis.com/auth/spreadsheets',
                 callback: (tokenResponse) => {
-                    // ‼‼ CORRECTION: Le callback ne s'exécute que si onLoginCallback est prêt ‼‼
                     if (onLoginCallback) {
                         if (tokenResponse.error) {
                             console.error("Erreur de token:", tokenResponse.error);
@@ -110,9 +89,7 @@ const googleApiManager = {
         }
     },
 
-    // Vérifie si les deux API sont prêtes avant de continuer
     checkAllReady: () => {
-        // ‼‼ CORRECTION: Ne vérifie que si le 'onLoginCallback' a été défini (par initializeApp)
         if (gapiReady && gisReady && onLoginCallback) {
             const token = googleApiManager.gapi.client.getToken();
             onLoginCallback(token !== null);
@@ -337,8 +314,7 @@ function initializeApp() {
     // 3. Mettre en place les écouteurs d'événements
     setupGlobalEventListeners();
     
-    // 4. ‼‼ CORRECTION: C'est SEULEMENT MAINTENANT que l'on dit au manager
-    //    quelle fonction appeler en cas de changement de connexion.
+    // 4. Brancher le callback de connexion
     googleApiManager.initClient(handleLoginStatusChange);
 }
 
@@ -370,11 +346,17 @@ function setupGlobalEventListeners() {
     // Inventaire
     searchInput.addEventListener('input', renderCurrentView);
     inventoryGrid.addEventListener('click', handleGridClick);
+
+    // Fil d'ariane
+    breadcrumbs.addEventListener('click', (e) => {
+        if (e.target.dataset.nav === 'root') {
+            e.preventDefault();
+            navigateBack();
+        }
+    });
 }
 
 // ======================= GESTION AUTH & SPREADSHEET ======================= //
-// Cette fonction est maintenant "sûre" car elle n'est
-// appelée que lorsque les variables du DOM (loginOverlay, etc.) sont prêtes.
 function handleLoginStatusChange(loggedIn) {
     isLoggedIn = loggedIn;
     if (loggedIn) {
@@ -514,13 +496,6 @@ function updateBreadcrumbs() {
         stockTitle.innerHTML = `<i class="fas fa-folder-open"></i> ${currentSheet.title}`;
     }
 }
-
-breadcrumbs.addEventListener('click', (e) => {
-    if (e.target.dataset.nav === 'root') {
-        e.preventDefault();
-        navigateBack();
-    }
-});
 
 // ======================= RENDU (VUES) ======================= //
 
@@ -767,6 +742,7 @@ function openAddProductModal() {
     `;
 
     const form = document.getElementById('modal-product-form');
+    // ‼‼ CORRECTIONS APPLIQUÉES CI-DESSOUS ‼‼
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!form.checkValidity()) { form.reportValidity(); return; }
@@ -776,13 +752,14 @@ function openAddProductModal() {
             return form.elements[fieldId].value;
         });
 
+        // CORRECTION 1: Utilisation de 'currentSheet.title'
         const range = `${currentSheet.title}!A:A`;
         const success = await googleApiManager.appendRow(currentSpreadsheetId, range, newRowData);
         if (success) {
             closeModal(addProductModal);
             renderProductListView();
         }
-    });
+    }); // CORRECTION 2: Ajout de la parenthèse fermante ')'
 
     addProductModal.style.display = 'block';
 }
