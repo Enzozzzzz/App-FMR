@@ -8,30 +8,20 @@
 
 /**
  * Appelée par <script src="https://apis.google.com/js/api.js" ...>
- * Délègue l'appel au manager une fois qu'il sera prêt.
+ * Délègue l'appel au manager.
  */
 function gapiClientLoaded() {
-    // On attend que 'googleApiManager' soit défini avant de l'appeler
-    if (googleApiManager && typeof googleApiManager.gapiClientLoaded === 'function') {
-        googleApiManager.gapiClientLoaded();
-    } else {
-        // Si le script principal n'est pas encore chargé, on réessaie
-        setTimeout(gapiClientLoaded, 100);
-    }
+    // Appelle simplement la fonction du manager.
+    // Le manager gérera lui-même l'attente du DOM s'il le faut.
+    googleApiManager.gapiClientLoaded();
 }
 
 /**
  * Appelée par <script src="https://accounts.google.com/gsi/client" ...>
- * Délègue l'appel au manager une fois qu'il sera prêt.
+ * Délègue l'appel au manager.
  */
 function gisClientLoaded() {
-    // On attend que 'googleApiManager' soit défini avant de l'appeler
-    if (googleApiManager && typeof googleApiManager.gisClientLoaded === 'function') {
-        googleApiManager.gisClientLoaded();
-    } else {
-        // Si le script principal n'est pas encore chargé, on réessaie
-        setTimeout(gisClientLoaded, 100);
-    }
+    googleApiManager.gisClientLoaded();
 }
 
 
@@ -53,13 +43,17 @@ const googleApiManager = {
     tokenClient: null,
 
     // initClient stocke juste le callback maintenant.
+    // ‼‼ CORRECTION: Cette fonction sera appelée par initializeApp() ‼‼
     initClient: (onLoginStatusChange) => {
         onLoginCallback = onLoginStatusChange;
+        // Si GIS est déjà prêt (chargé avant le DOM), on re-vérifie
+        if (gisReady) {
+            googleApiManager.checkAllReady();
+        }
     },
 
     // Appelée par la fonction globale "gapiClientLoaded"
     gapiClientLoaded: () => {
-        // MODIFICATION : Ajout de 'picker'
         gapi.load('client:picker', async () => {
             try {
                 await gapi.client.init({
@@ -71,7 +65,9 @@ const googleApiManager = {
                 googleApiManager.checkAllReady();
             } catch (err) {
                 console.error("Erreur d'init GAPI client", err);
-                showNotification("Erreur de chargement GAPI", "error");
+                if (typeof showNotification === 'function') {
+                    showNotification("Erreur de chargement GAPI", "error");
+                }
             }
         });
     },
@@ -81,7 +77,9 @@ const googleApiManager = {
         try {
             if (!window.google || !window.google.accounts) {
                 console.error("GIS chargé, mais window.google.accounts n'est pas dispo.");
-                showNotification("Erreur critique de l'API Google", "error");
+                if (typeof showNotification === 'function') {
+                    showNotification("Erreur critique de l'API Google", "error");
+                }
                 return;
             }
             googleApiManager.gis = window.google.accounts;
@@ -89,26 +87,32 @@ const googleApiManager = {
                 client_id: googleApiManager.CLIENT_ID,
                 scope: 'https://www.googleapis.com/auth/spreadsheets',
                 callback: (tokenResponse) => {
-                    if (tokenResponse.error) {
-                        console.error("Erreur de token:", tokenResponse.error);
-                        showNotification("Échec de l'autorisation", "error");
-                        if (onLoginCallback) onLoginCallback(false);
-                        return;
+                    // ‼‼ CORRECTION: Le callback ne s'exécute que si onLoginCallback est prêt ‼‼
+                    if (onLoginCallback) {
+                        if (tokenResponse.error) {
+                            console.error("Erreur de token:", tokenResponse.error);
+                            showNotification("Échec de l'autorisation", "error");
+                            onLoginCallback(false);
+                            return;
+                        }
+                        showNotification("Connecté à Google", "success");
+                        onLoginCallback(true);
                     }
-                    if (onLoginCallback) onLoginCallback(true);
-                    showNotification("Connecté à Google", "success");
                 },
             });
             gisReady = true;
             googleApiManager.checkAllReady();
         } catch (e) {
             console.error("Erreur d'init GIS client", e);
-            showNotification("Erreur de chargement des API Google (GIS)", "error");
+            if (typeof showNotification === 'function') {
+                showNotification("Erreur de chargement des API Google (GIS)", "error");
+            }
         }
     },
 
     // Vérifie si les deux API sont prêtes avant de continuer
     checkAllReady: () => {
+        // ‼‼ CORRECTION: Ne vérifie que si le 'onLoginCallback' a été défini (par initializeApp)
         if (gapiReady && gisReady && onLoginCallback) {
             const token = googleApiManager.gapi.client.getToken();
             onLoginCallback(token !== null);
@@ -153,7 +157,7 @@ const googleApiManager = {
                 spreadsheetId: spreadsheetId,
                 range: range,
             });
-            return response.result.values || []; // Retourne tableau vide si la feuille est vide
+            return response.result.values || [];
         } catch (err) {
             handleApiError(err, "lecture des données");
             return null;
@@ -206,7 +210,7 @@ const googleApiManager = {
                             range: {
                                 sheetId: sheetId,
                                 dimension: 'ROWS',
-                                startIndex: rowIndex - 1, // API est 0-indexed
+                                startIndex: rowIndex - 1,
                                 endIndex: rowIndex
                             }
                         }
@@ -260,8 +264,6 @@ const googleApiManager = {
 };
 
 // ======================= ÉLÉMENTS DU DOM ======================= //
-// Ces variables seront 'null' au début, c'est normal.
-// Elles seront assignées dans initializeApp()
 let navLinks, tabs, appContainer, inventoryGrid, searchInput, categoryFilter, statusFilter,
     breadcrumbs, themeToggle, stockTitle, backBtn, fabContainer, fabBtn, 
     addFolderFabBtn, addProductFabBtn, loginOverlay, sheetPrompt, gLoginBtn, 
@@ -290,16 +292,15 @@ function setupTheme() {
 // ======================= ÉTAT GLOBAL DE L'APPLICATION ======================= //
 let isLoggedIn = false;
 let currentSpreadsheetId = localStorage.getItem('spreadsheetId') || null;
-let spreadsheetDetails = null; // Cache les détails (noms/id des onglets)
-let currentSheet = null; // { title: "Textile", id: 12345 }
-let currentHeaders = []; // Cache les en-têtes [ "Nom", "Prix", "Stock" ]
-let currentData = []; // Cache les données [ { "Nom": "Veste", ... }, ... ]
-let currentView = 'sheets'; // 'sheets' (vue des dossiers) ou 'products' (vue des produits)
+let spreadsheetDetails = null;
+let currentSheet = null;
+let currentHeaders = [];
+let currentData = [];
+let currentView = 'sheets';
 
 // ======================= INITIALISATION DE L'APP ======================= //
 function initializeApp() {
-    // ‼‼ CORRECTION: Assigner les variables du DOM ici ‼‼
-    // Maintenant que le DOM est chargé, on peut trouver les éléments.
+    // 1. Assigner toutes les variables du DOM
     navLinks = document.querySelectorAll('nav a');
     tabs = document.querySelectorAll('.tab-content');
     appContainer = document.getElementById('app-container');
@@ -329,12 +330,15 @@ function initializeApp() {
     createSheetModal = document.getElementById('create-sheet-modal');
     createSheetForm = document.getElementById('create-sheet-form');
 
-    // Mettre en place le thème
+    // 2. Mettre en place le thème
     setupTheme();
-    appContainer.style.display = 'none'; // Caché par défaut
+    appContainer.style.display = 'none';
 
-    // Le reste de l'initialisation
+    // 3. Mettre en place les écouteurs d'événements
     setupGlobalEventListeners();
+    
+    // 4. ‼‼ CORRECTION: C'est SEULEMENT MAINTENANT que l'on dit au manager
+    //    quelle fonction appeler en cas de changement de connexion.
     googleApiManager.initClient(handleLoginStatusChange);
 }
 
@@ -369,7 +373,8 @@ function setupGlobalEventListeners() {
 }
 
 // ======================= GESTION AUTH & SPREADSHEET ======================= //
-
+// Cette fonction est maintenant "sûre" car elle n'est
+// appelée que lorsque les variables du DOM (loginOverlay, etc.) sont prêtes.
 function handleLoginStatusChange(loggedIn) {
     isLoggedIn = loggedIn;
     if (loggedIn) {
@@ -400,7 +405,6 @@ function handleSheetIdSubmit(e) {
     }
 }
 
-// NOUVELLE FONCTION
 async function handleChangeSheet() {
     const confirmation = confirm("Voulez-vous changer de Google Sheet ? Vous retournerez à l'écran de sélection.");
     if (confirmation) {
@@ -408,10 +412,8 @@ async function handleChangeSheet() {
         localStorage.removeItem('spreadsheetId');
         spreadsheetDetails = null;
         
-        // Réinitialise la vue
         resetAppView(); 
         
-        // Force l'affichage du prompt de sheet (car on est toujours loggé)
         handleLoginStatusChange(true);
     }
 }
@@ -489,7 +491,7 @@ function navigateBack() {
         renderCurrentView();
         updateBreadcrumbs();
         backBtn.classList.add('hidden');
-        searchInput.value = ''; // Vider la recherche
+        searchInput.value = '';
     }
 }
 
@@ -529,7 +531,6 @@ async function renderSheetListView() {
         return;
     }
 
-    // Rafraîchir les détails au cas où des produits ont été ajoutés
     const details = await googleApiManager.getSpreadsheetDetails(currentSpreadsheetId);
     if (details) spreadsheetDetails = details;
     else {
@@ -543,7 +544,6 @@ async function renderSheetListView() {
         card.dataset.sheetTitle = sheet.properties.title;
         card.dataset.sheetId = sheet.properties.sheetId;
 
-        // Tente d'estimer le nombre de produits (rowCount - 1 pour l'en-tête)
         const productCount = (sheet.properties.gridProperties.rowCount || 1) - 1;
 
         card.innerHTML = `
@@ -732,7 +732,7 @@ function buildImportTabForm() {
             return form.elements[fieldId].value;
         });
 
-        const range = `${sheetTitle}!A:A`; // Append
+        const range = `${sheetTitle}!A:A`;
         const success = await googleApiManager.appendRow(currentSpreadsheetId, range, newRowData);
         if (success) {
             form.reset();
@@ -776,7 +776,7 @@ function openAddProductModal() {
             return form.elements[fieldId].value;
         });
 
-        const range = `${currentSheet.title}!A:A`; // Append
+        const range = `${currentSheet.title}!A:A`;
         const success = await googleApiManager.appendRow(currentSpreadsheetId, range, newRowData);
         if (success) {
             closeModal(addProductModal);
@@ -814,7 +814,7 @@ function openEditProductModal(rowIndex) {
             return form.elements[fieldId].value;
         });
 
-        const endColumn = String.fromCharCode(64 + currentHeaders.length); // 65 = 'A'
+        const endColumn = String.fromCharCode(64 + currentHeaders.length);
         const range = `${currentSheet.title}!A${rowIndex}:${endColumn}${rowIndex}`;
 
         const success = await googleApiManager.updateRow(currentSpreadsheetId, range, updatedRowData);
@@ -855,7 +855,6 @@ function buildDynamicFormHTML(headers, data = null) {
 // ======================= GESTION DES ACTIONS ======================= //
 
 async function handleGridClick(e) {
-    // Gère les menus "..."
     const moreBtn = e.target.closest('.more-btn');
     if (moreBtn) {
         e.stopPropagation();
@@ -980,7 +979,6 @@ function updateStatistics() {
 
 // ======================= UTILITAIRES ======================= //
 
-// NOUVELLES FONCTIONS : GOOGLE PICKER
 function createPicker() {
     if (!googleApiManager.gapi || !googleApiManager.tokenClient) {
         showNotification("API Google non prête.", "error");
@@ -998,7 +996,7 @@ function createPicker() {
     view.setMimeTypes('application/vnd.google-apps-spreadsheet');
 
     const picker = new google.picker.PickerBuilder()
-        .setAppId(googleApiManager.CLIENT_ID.split('-')[0]) // Utilise la partie numérique du Client ID
+        .setAppId(googleApiManager.CLIENT_ID.split('-')[0])
         .setOAuthToken(token.access_token)
         .setDeveloperKey(googleApiManager.API_KEY)
         .addView(view)
@@ -1012,12 +1010,10 @@ function pickerCallback(data) {
         const doc = data[google.picker.Document.DOCUMENTS][0];
         const sheetId = doc[google.picker.Document.ID];
         
-        // Pré-remplir l'input et charger la sheet
         spreadsheetIdInput.value = sheetId;
         loadSpreadsheet(sheetId);
     }
 }
-// FIN DES NOUVELLES FONCTIONS
 
 
 function handleApiError(err, action) {
@@ -1028,7 +1024,10 @@ function handleApiError(err, action) {
 
 function showNotification(message, type = 'success') {
     const container = document.getElementById('notification-container');
-    if (!container) return; // Ne rien faire si le conteneur n'existe pas
+    if (!container) { // Sécurité au cas où le DOM n'est pas prêt
+        console.log(`Notification (${type}): ${message}`);
+        return;
+    }
     const notif = document.createElement('div');
     notif.className = `notification ${type}`;
     const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
@@ -1040,7 +1039,7 @@ function showNotification(message, type = 'success') {
 function closeModal(modal) {
     if (modal) modal.style.display = 'none';
     const modalBody = modal.querySelector('.modal-body');
-    if (modalBody) modalBody.innerHTML = ''; // Vider le contenu
+    if (modalBody) modalBody.innerHTML = '';
 }
 
 // --- DÉMARRAGE ---
