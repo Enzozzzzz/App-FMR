@@ -30,7 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Appelée par <script onload="gapiClientLoaded()"> depuis index.html
         gapiClientLoaded: () => {
-            gapi.load('client', async () => {
+            // MODIFICATION : Ajout de 'picker'
+            gapi.load('client:picker', async () => {
                 try {
                     await gapi.client.init({
                         apiKey: googleApiManager.API_KEY,
@@ -250,9 +251,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginOverlay = document.getElementById('login-overlay');
     const sheetPrompt = document.getElementById('sheet-prompt');
     const gLoginBtn = document.getElementById('g-login-btn-main');
-    const gLogoutBtn = document.getElementById('g-logout-btn-main');
+    const gLogoutBtn = document.getElementById('g-logout-btn-main'); // Celui du prompt
     const sheetIdForm = document.getElementById('sheet-id-form');
     const spreadsheetIdInput = document.getElementById('spreadsheet-id-input');
+    // Nouveaux éléments
+    const gLogoutBtnHeader = document.getElementById('g-logout-btn-header');
+    const changeSheetBtn = document.getElementById('change-sheet-btn');
+    const openPickerBtn = document.getElementById('open-picker-btn');
 
     // --- ÉLÉMENTS FORMULAIRES DYNAMIQUES ---
     const importFormContainer = document.getElementById('import');
@@ -295,19 +300,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupGlobalEventListeners() {
+        // Boutons de connexion / déconnexion
         gLoginBtn.addEventListener('click', googleApiManager.handleLogin);
         gLogoutBtn.addEventListener('click', () => googleApiManager.handleLogout(handleLoginStatusChange));
+        gLogoutBtnHeader.addEventListener('click', () => googleApiManager.handleLogout(handleLoginStatusChange));
+        
+        // Gestion Sheet
         sheetIdForm.addEventListener('submit', handleSheetIdSubmit);
+        changeSheetBtn.addEventListener('click', handleChangeSheet);
+        openPickerBtn.addEventListener('click', createPicker);
+
+        // Navigation App
         navLinks.forEach(link => link.addEventListener('click', handleNavClick));
         backBtn.addEventListener('click', navigateBack);
+        
+        // FAB
         fabBtn.addEventListener('click', () => fabContainer.classList.toggle('active'));
         addProductFabBtn.addEventListener('click', openAddProductModal);
         addFolderFabBtn.addEventListener('click', () => createSheetModal.style.display = 'block');
+        
+        // Modals
         createSheetForm.addEventListener('submit', handleAddSheet);
-        searchInput.addEventListener('input', renderCurrentView);
-        inventoryGrid.addEventListener('click', handleGridClick);
         document.querySelectorAll('.modal .close, .modal .close-modal-btn').forEach(btn => btn.addEventListener('click', e => closeModal(e.target.closest('.modal'))));
         window.addEventListener('click', e => { if (e.target.classList.contains('modal')) closeModal(e.target); });
+
+        // Inventaire
+        searchInput.addEventListener('input', renderCurrentView);
+        inventoryGrid.addEventListener('click', handleGridClick);
     }
 
     // ======================= GESTION AUTH & SPREADSHEET ======================= //
@@ -339,6 +358,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = spreadsheetIdInput.value.trim();
         if (id) {
             loadSpreadsheet(id);
+        }
+    }
+    
+    // NOUVELLE FONCTION
+    async function handleChangeSheet() {
+        const confirmation = confirm("Voulez-vous changer de Google Sheet ? Vous retournerez à l'écran de sélection.");
+        if (confirmation) {
+            currentSpreadsheetId = null;
+            localStorage.removeItem('spreadsheetId');
+            spreadsheetDetails = null;
+            
+            // Réinitialise la vue
+            resetAppView(); 
+            
+            // Force l'affichage du prompt de sheet (car on est toujours loggé)
+            handleLoginStatusChange(true);
         }
     }
 
@@ -905,6 +940,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ======================= UTILITAIRES ======================= //
+    
+    // NOUVELLES FONCTIONS : GOOGLE PICKER
+    function createPicker() {
+        if (!googleApiManager.gapi || !googleApiManager.tokenClient) {
+            showNotification("API Google non prête.", "error");
+            return;
+        }
+
+        const token = googleApiManager.gapi.client.getToken();
+        if (!token) {
+            showNotification("Veuillez vous reconnecter.", "error");
+            googleApiManager.handleLogin();
+            return;
+        }
+
+        const view = new google.picker.View(google.picker.ViewId.SPREADSHEETS);
+        view.setMimeTypes('application/vnd.google-apps.spreadsheet');
+
+        const picker = new google.picker.PickerBuilder()
+            .setAppId(googleApiManager.CLIENT_ID.split('-')[0]) // Utilise la partie numérique du Client ID
+            .setOAuthToken(token.access_token)
+            .setDeveloperKey(googleApiManager.API_KEY)
+            .addView(view)
+            .setCallback(pickerCallback)
+            .build();
+        picker.setVisible(true);
+    }
+
+    function pickerCallback(data) {
+        if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
+            const doc = data[google.picker.Document.DOCUMENTS][0];
+            const sheetId = doc[google.picker.Document.ID];
+            
+            // Pré-remplir l'input et charger la sheet
+            spreadsheetIdInput.value = sheetId;
+            loadSpreadsheet(sheetId);
+        }
+    }
+    // FIN DES NOUVELLES FONCTIONS
+
+
     function handleApiError(err, action) {
         console.error(`Erreur GSheet lors de ${action}:`, err);
         const message = err.result?.error?.message || err.message || "Erreur inconnue";

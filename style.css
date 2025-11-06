@@ -349,3 +349,19 @@ body[data-theme="dark"] .google-login-uiverse:hover {
 /* ==========================================
    FIN DU REDESIGN
    ========================================== */
+
+
+/* STYLES AJOUTÉS POUR LES NOUVEAUX BOUTONS DU HEADER */
+.header-actions {
+    display: flex;
+    gap: 10px;
+    margin-left: 15px;
+}
+
+.header-actions .btn {
+    padding: 8px 12px;
+    font-size: 14px;
+    width: 42px; /* Pour un look icône carrée/ronde */
+    height: 42px;
+    border-radius: 50%;
+}

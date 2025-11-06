@@ -35,6 +35,14 @@
                     </label>
                     <i class="fas fa-moon"></i>
                 </div>
+                <div class="header-actions">
+                    <button id="change-sheet-btn" class="btn btn-secondary" title="Changer de Google Sheet">
+                        <i class="fas fa-exchange-alt"></i>
+                    </button>
+                    <button id="g-logout-btn-header" class="btn btn-secondary" title="Déconnexion">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -146,14 +154,20 @@
     <div class="login-overlay sheet-prompt hidden" id="sheet-prompt">
         <div class="login-box">
             <h3>Base de données Google Sheet</h3>
-            <p>Collez l'ID de votre Google Sheet principale.</p>
+            <p>Collez l'ID de votre Sheet ou choisissez un fichier :</p>
+
+            <button id="open-picker-btn" class="btn btn-secondary" style="width: 100%; margin-bottom: 15px;">
+                <i class="fas fa-folder-open"></i> Choisir depuis Google Drive
+            </button>
+
             <form id="sheet-id-form" style="width: 100%;">
-                <input type="text" id="spreadsheet-id-input" placeholder="ID de la Google Sheet..." required>
+                <input type="text" id="spreadsheet-id-input" placeholder="Ou collez l'ID de la Sheet..." required>
                 <button type="submit" class="btn btn-finish">Charger la Sheet</button>
             </form>
             <button id="g-logout-btn-main" class="btn btn-secondary" style="margin-top: 10px;">Déconnexion</button>
         </div>
     </div>
+
     <div class="modal" id="edit-modal">
         <div class="modal-content"><div class="modal-header"><h3>Modifier le produit</h3><button class="close" aria-label="Fermer">&times;</button></div><div class="modal-body"></div></div>
     </div>
@@ -161,7 +175,7 @@
     <div class="modal" id="add-photos-modal">
         </div>
 
-    <div class="modal" id="create-folder-modal"> <div class="modal-content" id="create-sheet-modal">
+    <div class="modal" id="create-sheet-modal"> <div class="modal-content">
             <div class="modal-header">
                 <h3>Créer un nouveau dossier (Onglet)</h3>
                 <button class="close" aria-label="Fermer">&times;</button>
