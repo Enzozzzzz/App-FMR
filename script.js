@@ -260,54 +260,32 @@ const googleApiManager = {
 };
 
 // ======================= ÉLÉMENTS DU DOM ======================= //
-const navLinks = document.querySelectorAll('nav a');
-const tabs = document.querySelectorAll('.tab-content');
-const appContainer = document.getElementById('app-container');
-const inventoryGrid = document.getElementById('inventory-grid');
-const searchInput = document.getElementById('search-input');
-const categoryFilter = document.getElementById('category-filter');
-const statusFilter = document.getElementById('status-filter');
-const breadcrumbs = document.getElementById('breadcrumbs');
-const themeToggle = document.getElementById('theme-checkbox');
-const stockTitle = document.getElementById('stock-title');
-const backBtn = document.getElementById('back-btn');
-const fabContainer = document.querySelector('.fab-container');
-const fabBtn = document.getElementById('fab-add-btn');
-const addFolderFabBtn = document.getElementById('add-folder-fab-btn');
-const addProductFabBtn = document.getElementById('add-product-fab-btn');
-
-// --- ÉLÉMENTS AUTH & PROMPT ---
-const loginOverlay = document.getElementById('login-overlay');
-const sheetPrompt = document.getElementById('sheet-prompt');
-const gLoginBtn = document.getElementById('g-login-btn-main');
-const gLogoutBtn = document.getElementById('g-logout-btn-main'); // Celui du prompt
-const sheetIdForm = document.getElementById('sheet-id-form');
-const spreadsheetIdInput = document.getElementById('spreadsheet-id-input');
-// Nouveaux éléments
-const gLogoutBtnHeader = document.getElementById('g-logout-btn-header');
-const changeSheetBtn = document.getElementById('change-sheet-btn');
-const openPickerBtn = document.getElementById('open-picker-btn');
-
-// --- ÉLÉMENTS FORMULAIRES DYNAMIQUES ---
-const importFormContainer = document.getElementById('import');
-const addProductModal = document.getElementById('add-product-modal');
-const editModal = document.getElementById('edit-modal');
-const createSheetModal = document.getElementById('create-sheet-modal');
-const createSheetForm = document.getElementById('create-sheet-form');
+// Ces variables seront 'null' au début, c'est normal.
+// Elles seront assignées dans initializeApp()
+let navLinks, tabs, appContainer, inventoryGrid, searchInput, categoryFilter, statusFilter,
+    breadcrumbs, themeToggle, stockTitle, backBtn, fabContainer, fabBtn, 
+    addFolderFabBtn, addProductFabBtn, loginOverlay, sheetPrompt, gLoginBtn, 
+    gLogoutBtn, sheetIdForm, spreadsheetIdInput, gLogoutBtnHeader, 
+    changeSheetBtn, openPickerBtn, importFormContainer, addProductModal, 
+    editModal, createSheetModal, createSheetForm;
 
 // ======================= GESTION DU THÈME SOMBRE ======================= //
-const applyTheme = (theme) => {
-    document.body.setAttribute('data-theme', theme);
-    themeToggle.checked = theme === 'dark';
-};
-themeToggle.addEventListener('change', () => {
-    const newTheme = themeToggle.checked ? 'dark' : 'light';
-    localStorage.setItem('theme', newTheme);
-    applyTheme(newTheme);
-});
-const savedTheme = localStorage.getItem('theme') || 'light';
-applyTheme(savedTheme);
-appContainer.style.display = 'none'; // Caché par défaut
+function setupTheme() {
+    themeToggle = document.getElementById('theme-checkbox');
+    const applyTheme = (theme) => {
+        document.body.setAttribute('data-theme', theme);
+        if (themeToggle) themeToggle.checked = theme === 'dark';
+    };
+    if (themeToggle) {
+        themeToggle.addEventListener('change', () => {
+            const newTheme = themeToggle.checked ? 'dark' : 'light';
+            localStorage.setItem('theme', newTheme);
+            applyTheme(newTheme);
+        });
+    }
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(savedTheme);
+}
 
 // ======================= ÉTAT GLOBAL DE L'APPLICATION ======================= //
 let isLoggedIn = false;
@@ -320,9 +298,42 @@ let currentView = 'sheets'; // 'sheets' (vue des dossiers) ou 'products' (vue de
 
 // ======================= INITIALISATION DE L'APP ======================= //
 function initializeApp() {
-    // ‼‼ CORRECTION: Inutile de les assigner à 'window' ici ‼‼
-    // Les fonctions globales en haut du fichier s'en chargent.
+    // ‼‼ CORRECTION: Assigner les variables du DOM ici ‼‼
+    // Maintenant que le DOM est chargé, on peut trouver les éléments.
+    navLinks = document.querySelectorAll('nav a');
+    tabs = document.querySelectorAll('.tab-content');
+    appContainer = document.getElementById('app-container');
+    inventoryGrid = document.getElementById('inventory-grid');
+    searchInput = document.getElementById('search-input');
+    categoryFilter = document.getElementById('category-filter');
+    statusFilter = document.getElementById('status-filter');
+    breadcrumbs = document.getElementById('breadcrumbs');
+    stockTitle = document.getElementById('stock-title');
+    backBtn = document.getElementById('back-btn');
+    fabContainer = document.querySelector('.fab-container');
+    fabBtn = document.getElementById('fab-add-btn');
+    addFolderFabBtn = document.getElementById('add-folder-fab-btn');
+    addProductFabBtn = document.getElementById('add-product-fab-btn');
+    loginOverlay = document.getElementById('login-overlay');
+    sheetPrompt = document.getElementById('sheet-prompt');
+    gLoginBtn = document.getElementById('g-login-btn-main');
+    gLogoutBtn = document.getElementById('g-logout-btn-main');
+    sheetIdForm = document.getElementById('sheet-id-form');
+    spreadsheetIdInput = document.getElementById('spreadsheet-id-input');
+    gLogoutBtnHeader = document.getElementById('g-logout-btn-header');
+    changeSheetBtn = document.getElementById('change-sheet-btn');
+    openPickerBtn = document.getElementById('open-picker-btn');
+    importFormContainer = document.getElementById('import');
+    addProductModal = document.getElementById('add-product-modal');
+    editModal = document.getElementById('edit-modal');
+    createSheetModal = document.getElementById('create-sheet-modal');
+    createSheetForm = document.getElementById('create-sheet-form');
 
+    // Mettre en place le thème
+    setupTheme();
+    appContainer.style.display = 'none'; // Caché par défaut
+
+    // Le reste de l'initialisation
     setupGlobalEventListeners();
     googleApiManager.initClient(handleLoginStatusChange);
 }
@@ -429,13 +440,13 @@ async function loadSpreadsheet(id) {
 }
 
 function resetAppView() {
-    inventoryGrid.innerHTML = '<div class="no-products"><p>Veuillez vous connecter et charger une Spreadsheet.</p></div>';
-    stockTitle.innerHTML = '<i class="fas fa-box-open"></i> Inventaire';
-    breadcrumbs.innerHTML = '';
+    if (inventoryGrid) inventoryGrid.innerHTML = '<div class="no-products"><p>Veuillez vous connecter et charger une Spreadsheet.</p></div>';
+    if (stockTitle) stockTitle.innerHTML = '<i class="fas fa-box-open"></i> Inventaire';
+    if (breadcrumbs) breadcrumbs.innerHTML = '';
     currentSheet = null;
     currentData = [];
     currentHeaders = [];
-    backBtn.classList.add('hidden');
+    if (backBtn) backBtn.classList.add('hidden');
 }
 
 // ======================= LOGIQUE DE NAVIGATION & VUE ======================= //
@@ -672,7 +683,7 @@ function createDynamicProductCardHTML(item, headers) {
 
 function buildImportTabForm() {
     if (!spreadsheetDetails) {
-        importFormContainer.innerHTML = '<h2 class="section-title"><i class="fas fa-file-import"></i> Ajouter un produit</h2><p>Veuillez d\'abord charger une Spreadsheet dans l\'onglet "Inventaire".</p>';
+        if (importFormContainer) importFormContainer.innerHTML = '<h2 class="section-title"><i class="fas fa-file-import"></i> Ajouter un produit</h2><p>Veuillez d\'abord charger une Spreadsheet dans l\'onglet "Inventaire".</p>';
         return;
     }
 
@@ -928,9 +939,9 @@ function updateStatistics() {
     const totalValueEl = document.getElementById('total-stock-value');
 
     if (!currentData || currentData.length === 0) {
-        statsContainer.innerHTML = "<p>Chargez un onglet dans l'inventaire pour voir les statistiques.</p>";
-        categoryChart.innerHTML = '';
-        totalValueEl.textContent = '0,00';
+        if (statsContainer) statsContainer.innerHTML = "<p>Chargez un onglet dans l'inventaire pour voir les statistiques.</p>";
+        if (categoryChart) categoryChart.innerHTML = '';
+        if (totalValueEl) totalValueEl.textContent = '0,00';
         return;
     }
 
@@ -984,7 +995,7 @@ function createPicker() {
     }
 
     const view = new google.picker.View(google.picker.ViewId.SPREADSHEETS);
-    view.setMimeTypes('application/vnd.google-apps.spreadsheet');
+    view.setMimeTypes('application/vnd.google-apps-spreadsheet');
 
     const picker = new google.picker.PickerBuilder()
         .setAppId(googleApiManager.CLIENT_ID.split('-')[0]) // Utilise la partie numérique du Client ID
@@ -1017,6 +1028,7 @@ function handleApiError(err, action) {
 
 function showNotification(message, type = 'success') {
     const container = document.getElementById('notification-container');
+    if (!container) return; // Ne rien faire si le conteneur n'existe pas
     const notif = document.createElement('div');
     notif.className = `notification ${type}`;
     const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
