@@ -1,5 +1,6 @@
 /* ========================================================================
    BACKROOM by FMR - v2.0 (Google Sheets Backend)
+   Flux de REDIRECTION (pour contourner COOP/Vercel)
    ======================================================================== */
 
 // Callbacks globaux
@@ -16,20 +17,17 @@ function gisClientLoaded() {
 let gapiReady = false;
 let gisReady = false;
 let onLoginCallback = null;
+let tokenClient = null; 
 
 // ======================= GESTIONNAIRE GOOGLE API ======================= //
 const googleApiManager = {
-    // La Clé API n'est plus nécessaire
-    // API_KEY: 'VOTRE_CLE_API',
     CLIENT_ID: '539526644294-d6jju7s5artqk518ptt3t27laih4i7qg.apps.googleusercontent.com',
-
     gapi: null,
     gis: null,
-    tokenClient: null, 
 
     initClient: (onLoginStatusChange) => {
         onLoginCallback = onLoginStatusChange;
-        if (gisReady) {
+        if (gisReady && gapiReady) {
             googleApiManager.checkAllReady();
         }
     },
@@ -37,14 +35,14 @@ const googleApiManager = {
     gapiClientLoaded: () => {
         gapi.load('client:picker', async () => {
             try {
-                // Initialisation SANS Clé API
                 await gapi.client.init({
-                    // apiKey: googleApiManager.API_KEY, // -> Supprimé
                     discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
                 });
                 googleApiManager.gapi = gapi;
                 gapiReady = true;
-                googleApiManager.checkAllReady();
+                if (gisReady) {
+                    googleApiManager.checkAllReady();
+                }
             } catch (err) {
                 console.error("Erreur d'init GAPI client", err);
                 if (typeof showNotification === 'function') {
@@ -65,30 +63,17 @@ const googleApiManager = {
             }
             googleApiManager.gis = window.google.accounts;
             
-            // ‼‼ REVERT: Retour au flux POP-UP
-            googleApiManager.tokenClient = googleApiManager.gis.oauth2.initTokenClient({
+            // Initialisation pour le flux REDIRECT
+            tokenClient = googleApiManager.gis.oauth2.initTokenClient({
                 client_id: googleApiManager.CLIENT_ID,
-                
-                // ‼‼ CORRECTION POUR L'ERREUR 403 ‼‼
-                // Ajout du scope 'drive.readonly' pour que le Picker puisse voir les fichiers
                 scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.readonly',
-                
-                callback: (tokenResponse) => { // Le callback gère la réponse du pop-up
-                    if (onLoginCallback) {
-                        if (tokenResponse.error) {
-                            console.error("Erreur de token:", tokenResponse.error);
-                            showNotification("Échec de l'autorisation", "error");
-                            onLoginCallback(false);
-                            return;
-                        }
-                        showNotification("Connecté à Google", "success");
-                        onLoginCallback(true);
-                    }
-                },
+                callback: '', // Le callback est géré au chargement de la page
             });
 
             gisReady = true;
-            googleApiManager.checkAllReady();
+            if (gapiReady) {
+                googleApiManager.checkAllReady();
+            }
         } catch (e) {
             console.error("Erreur d'init GIS client", e);
             if (typeof showNotification === 'function') {
@@ -98,17 +83,39 @@ const googleApiManager = {
     },
 
     checkAllReady: () => {
-        // ‼‼ REVERT: Vérification simple du token
-        if (gapiReady && gisReady && onLoginCallback) {
-            const token = googleApiManager.gapi.client.getToken();
-            onLoginCallback(token !== null);
-        }
+        // ‼‼ CORRECTION: C'est la bonne façon de gérer la redirection ‼‼
+        
+        // 1. Vérifier si l'URL contient un jeton de retour
+        const hash = window.location.hash;
+        if (hash.includes("access_token")) {
+            const params = new URLSearchParams(hash.substring(1)); // Enlever le #
+            
+            // Vérifier si c'est bien une réponse OAuth
+            if (params.has('access_token')) {
+                const token = {
+                    access_token: params.get('access_token'),
+                    expires_in: params.get('expires_in'),
+                };
+
+                // Stocker le jeton et nettoyer l'URL
+                googleApiManager.gapi.client.setToken(token);
+                window.location.hash = ''; // Nettoie l'URL
+                
+                showNotification("Connecté à Google", "success");
+                onLoginCallback(true);
+                return; // Important: on arrête ici
+            }
+        } 
+        
+        // 2. Si pas de jeton dans l'URL, vérifier si on est déjà connecté (session précédente)
+        const token = googleApiManager.gapi.client.getToken();
+        onLoginCallback(token !== null);
     },
 
-    // ‼‼ REVERT: handleLogin pour le POP-UP
+    // handleLogin lance la redirection
     handleLogin: () => {
-        if (googleApiManager.tokenClient) {
-            googleApiManager.tokenClient.requestAccessToken();
+        if (tokenClient) {
+            tokenClient.requestAccessToken({prompt: ''}); // Redirige la page
         }
     },
 
@@ -444,7 +451,7 @@ function resetAppView() {
 }
 
 // ======================= LOGIQUE DE NAVIGATION & VUE ======================= //
-
+// ... [Toutes les fonctions de Navigation (handleNavClick, etc.) sont identiques] ...
 function handleNavClick(e) {
     e.preventDefault();
     navLinks.forEach(l => l.classList.remove('active'));
@@ -508,7 +515,7 @@ function updateBreadcrumbs() {
 }
 
 // ======================= RENDU (VUES) ======================= //
-
+// ... [Toutes les fonctions de Rendu (renderSheetListView, etc.) sont identiques] ...
 async function renderSheetListView() {
     inventoryGrid.innerHTML = '';
     if (!spreadsheetDetails || !spreadsheetDetails.sheets) {
@@ -665,7 +672,7 @@ function createDynamicProductCardHTML(item, headers) {
 }
 
 // ======================= FORMULAIRES DYNAMIQUES ======================= //
-
+// ... [Toutes les fonctions de formulaire (buildImportTabForm, etc.) sont identiques] ...
 function buildImportTabForm() {
     if (!spreadsheetDetails) {
         if (importFormContainer) importFormContainer.innerHTML = '<h2 class="section-title"><i class="fas fa-file-import"></i> Ajouter un produit</h2><p>Veuillez d\'abord charger une Spreadsheet dans l\'onglet "Inventaire".</p>';
@@ -965,7 +972,7 @@ function updateStatistics() {
 // ======================= UTILITAIRES ======================= //
 
 function createPicker() {
-    if (!googleApiManager.gapi || !googleApiManager.tokenClient) {
+    if (!googleApiManager.gapi || !tokenClient) {
         showNotification("API Google non prête.", "error");
         return;
     }
@@ -977,7 +984,6 @@ function createPicker() {
         return;
     }
     
-    // ‼‼ CORRECTION Z-INDEX ‼‼
     // Cacher notre modal AVANT d'ouvrir le Picker
     sheetPrompt.classList.add('hidden');
 
@@ -995,17 +1001,14 @@ function createPicker() {
 }
 
 function pickerCallback(data) {
-    // ‼‼ CORRECTION Z-INDEX & CRASH ‼‼
     // Gérer le cas où l'utilisateur ferme le Picker (ou annule)
-    // ou si les données sont invalides (à cause du COOP)
     if (!data || data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
-        sheetPrompt.classList.remove('hidden');
+        sheetPrompt.classList.remove('hidden'); // On ré-affiche le modal
         return;
     }
     
     // Gérer le cas où l'utilisateur choisit un fichier
     if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
-        // Vérification de sécurité avant d'accéder à [0]
         if (data[google.picker.Document.DOCUMENTS] && data[google.picker.Document.DOCUMENTS].length > 0) {
             const doc = data[google.picker.Document.DOCUMENTS][0];
             const sheetId = doc[google.picker.Document.ID];
@@ -1013,7 +1016,6 @@ function pickerCallback(data) {
             spreadsheetIdInput.value = sheetId;
             loadSpreadsheet(sheetId);
         } else {
-             // Si 'PICKED' est vrai mais pas de document, c'est une erreur.
             sheetPrompt.classList.remove('hidden');
             showNotification("Erreur lors de la sélection du fichier.", "error");
         }
