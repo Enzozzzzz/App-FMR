@@ -19,8 +19,8 @@ let onLoginCallback = null;
 
 // ======================= GESTIONNAIRE GOOGLE API ======================= //
 const googleApiManager = {
-    // ⚠️ Assurez-vous que c'est votre clé API la plus récente
-    API_KEY: 'AIzaSyCW7NcKb1euepVEb4zP688gjMRq_C7_XNU',
+    // ‼‼ MODIFICATION: La Clé API n'est plus nécessaire ici
+    // API_KEY: 'VOTRE_CLE_API',
     CLIENT_ID: '539526644294-d6jju7s5artqk518ptt3t27laih4i7qg.apps.googleusercontent.com',
 
     gapi: null,
@@ -37,9 +37,9 @@ const googleApiManager = {
     gapiClientLoaded: () => {
         gapi.load('client:picker', async () => {
             try {
-                // Initialise le client GAPI (nécessaire pour Sheets ET Picker)
+                // ‼‼ MODIFICATION: Initialisation SANS Clé API
                 await gapi.client.init({
-                    apiKey: googleApiManager.API_KEY,
+                    // apiKey: googleApiManager.API_KEY, // -> Supprimé
                     discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
                 });
                 googleApiManager.gapi = gapi;
@@ -94,7 +94,7 @@ const googleApiManager = {
     },
 
     checkAllReady: () => {
-        // Vérification simple du token (pas de gestion de redirection)
+        // Vérification simple du token
         if (gapiReady && gisReady && onLoginCallback) {
             const token = googleApiManager.gapi.client.getToken();
             onLoginCallback(token !== null);
@@ -171,7 +171,7 @@ const googleApiManager = {
             await googleApiManager.gapi.client.sheets.spreadsheets.values.update({
                 spreadsheetId: spreadsheetId,
                 range: range,
-                valueInputOption: 'USER_ENTERED',
+                valueInputOption: 'USER_ENTERED', 
                 resource: { values: [values] }
             });
             showNotification("Produit mis à jour !", "success");
