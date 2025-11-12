@@ -657,7 +657,6 @@ function createDynamicProductCardHTML(item, headers) {
                 <span>Êtes-vous sûr ?</span>
                 <div class="confirm-actions">
                     <button class="btn btn-confirm-yes" data-action="confirm-delete-product">Oui</button>
-
                     <button class="btn btn-confirm-no" data-action="cancel-delete-product">Non</button>
                 </div>
             </div>
