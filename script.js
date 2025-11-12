@@ -65,12 +65,11 @@ const googleApiManager = {
             }
             googleApiManager.gis = window.google.accounts;
             
-            // ‼‼ REVERT: Retour au flux POP-UP
+            // Initialisation pour le flux POP-UP
             googleApiManager.tokenClient = googleApiManager.gis.oauth2.initTokenClient({
                 client_id: googleApiManager.CLIENT_ID,
                 
-                // ‼‼ CORRECTION POUR L'ERREUR 403 ‼‼
-                // Ajout du scope 'drive.readonly' pour que le Picker puisse voir les fichiers
+                // Scope 'drive.readonly' pour que le Picker puisse voir les fichiers
                 scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.readonly',
                 
                 callback: (tokenResponse) => { // Le callback gère la réponse du pop-up
@@ -98,14 +97,14 @@ const googleApiManager = {
     },
 
     checkAllReady: () => {
-        // ‼‼ REVERT: Vérification simple du token
+        // Vérification simple du token
         if (gapiReady && gisReady && onLoginCallback) {
             const token = googleApiManager.gapi.client.getToken();
             onLoginCallback(token !== null);
         }
     },
 
-    // ‼‼ REVERT: handleLogin pour le POP-UP
+    // handleLogin pour le POP-UP
     handleLogin: () => {
         if (googleApiManager.tokenClient) {
             googleApiManager.tokenClient.requestAccessToken();
@@ -976,6 +975,10 @@ function createPicker() {
         googleApiManager.handleLogin();
         return;
     }
+    
+    // ‼‼ CORRECTION Z-INDEX ‼‼
+    // Cacher notre modal AVANT d'ouvrir le Picker
+    sheetPrompt.classList.add('hidden');
 
     const view = new google.picker.View(google.picker.ViewId.SPREADSHEETS);
     view.setMimeTypes('application/vnd.google-apps-spreadsheet');
@@ -997,6 +1000,12 @@ function pickerCallback(data) {
         
         spreadsheetIdInput.value = sheetId;
         loadSpreadsheet(sheetId);
+        // On ne ré-affiche pas le modal, loadSpreadsheet s'en charge
+    } 
+    // ‼‼ CORRECTION Z-INDEX ‼‼
+    // Gérer le cas où l'utilisateur ferme le Picker
+    else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
+        sheetPrompt.classList.remove('hidden');
     }
 }
 
