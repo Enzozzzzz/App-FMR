@@ -16,6 +16,7 @@ function gisClientLoaded() {
 let gapiReady = false;
 let gisReady = false;
 let onLoginCallback = null;
+let tokenClient = null; // ‼‼ MODIFICATION: Déplacé hors du manager
 
 // ======================= GESTIONNAIRE GOOGLE API ======================= //
 const googleApiManager = {
@@ -25,7 +26,7 @@ const googleApiManager = {
 
     gapi: null,
     gis: null,
-    tokenClient: null, 
+    // tokenClient a été déplacé hors d'ici
 
     initClient: (onLoginStatusChange) => {
         onLoginCallback = onLoginStatusChange;
@@ -65,25 +66,11 @@ const googleApiManager = {
             }
             googleApiManager.gis = window.google.accounts;
             
-            googleApiManager.tokenClient = googleApiManager.gis.oauth2.initTokenClient({
+            // ‼‼ MODIFICATION: Initialisation pour le flux REDIRECT
+            tokenClient = googleApiManager.gis.oauth2.initTokenClient({
                 client_id: googleApiManager.CLIENT_ID,
-                
-                // ‼‼ CORRECTION POUR L'ERREUR 403 ‼‼
-                // Ajout du scope 'drive.readonly' pour que le Picker puisse voir les fichiers
                 scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.readonly',
-                
-                callback: (tokenResponse) => {
-                    if (onLoginCallback) {
-                        if (tokenResponse.error) {
-                            console.error("Erreur de token:", tokenResponse.error);
-                            showNotification("Échec de l'autorisation", "error");
-                            onLoginCallback(false);
-                            return;
-                        }
-                        showNotification("Connecté à Google", "success");
-                        onLoginCallback(true);
-                    }
-                },
+                callback: '', // Le callback est géré au chargement de la page
             });
 
             gisReady = true;
@@ -98,14 +85,33 @@ const googleApiManager = {
 
     checkAllReady: () => {
         if (gapiReady && gisReady && onLoginCallback) {
-            const token = googleApiManager.gapi.client.getToken();
-            onLoginCallback(token !== null);
+            // ‼‼ MODIFICATION: Gère la réponse de redirection
+            googleApiManager.gis.oauth2.handleRedirectResult(
+                (tokenResponse) => {
+                    // C'est ici qu'on atterrit APRES la redirection de Google
+                    if (tokenResponse.error) {
+                        console.error("Erreur de token:", tokenResponse.error);
+                        showNotification("Échec de l'autorisation", "error");
+                        onLoginCallback(false);
+                        return;
+                    }
+                    // Connexion réussie via redirection
+                    showNotification("Connecté à Google", "success");
+                    onLoginCallback(true);
+                },
+                () => {
+                    // S'il n'y a pas de 'tokenResponse', on vérifie si on est déjà connecté
+                    const token = googleApiManager.gapi.client.getToken();
+                    onLoginCallback(token !== null);
+                }
+            );
         }
     },
 
+    // ‼‼ MODIFICATION: handleLogin lance la redirection
     handleLogin: () => {
-        if (googleApiManager.tokenClient) {
-            googleApiManager.tokenClient.requestAccessToken();
+        if (tokenClient) {
+            tokenClient.requestAccessToken({prompt: ''});
         }
     },
 
@@ -980,9 +986,7 @@ function createPicker() {
     const picker = new google.picker.PickerBuilder()
         .setAppId(googleApiManager.CLIENT_ID.split('-')[0])
         .setOAuthToken(token.access_token)
-        // ‼‼ SOLUTION POUR LE 403 ‼‼
-        // Nous n'utilisons plus la Clé API ici.
-        // .setDeveloperKey(googleApiManager.API_KEY) 
+        // .setDeveloperKey(googleApiManager.API_KEY) // -> Supprimé
         .addView(view)
         .setCallback(pickerCallback)
         .build();
@@ -1008,7 +1012,7 @@ function handleApiError(err, action) {
 
 function showNotification(message, type = 'success') {
     const container = document.getElementById('notification-container');
-    if (!container) { // Sécurité au cas où le DOM n'est pas prêt
+    if (!container) { 
         console.log(`Notification (${type}): ${message}`);
         return;
     }
@@ -1027,7 +1031,6 @@ function closeModal(modal) {
 }
 
 // --- DÉMARRAGE ---
-// Attendre que le DOM soit chargé pour trouver les éléments
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
 });
