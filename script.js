@@ -16,17 +16,16 @@ function gisClientLoaded() {
 let gapiReady = false;
 let gisReady = false;
 let onLoginCallback = null;
-let tokenClient = null; // ‼‼ MODIFICATION: Déplacé hors du manager
 
 // ======================= GESTIONNAIRE GOOGLE API ======================= //
 const googleApiManager = {
-    // ‼‼ MODIFICATION: La Clé API n'est plus nécessaire ‼‼
+    // La Clé API n'est plus nécessaire
     // API_KEY: 'VOTRE_CLE_API',
     CLIENT_ID: '539526644294-d6jju7s5artqk518ptt3t27laih4i7qg.apps.googleusercontent.com',
 
     gapi: null,
     gis: null,
-    // tokenClient a été déplacé hors d'ici
+    tokenClient: null, 
 
     initClient: (onLoginStatusChange) => {
         onLoginCallback = onLoginStatusChange;
@@ -66,11 +65,26 @@ const googleApiManager = {
             }
             googleApiManager.gis = window.google.accounts;
             
-            // ‼‼ MODIFICATION: Initialisation pour le flux REDIRECT
-            tokenClient = googleApiManager.gis.oauth2.initTokenClient({
+            // ‼‼ REVERT: Retour au flux POP-UP
+            googleApiManager.tokenClient = googleApiManager.gis.oauth2.initTokenClient({
                 client_id: googleApiManager.CLIENT_ID,
+                
+                // ‼‼ CORRECTION POUR L'ERREUR 403 ‼‼
+                // Ajout du scope 'drive.readonly' pour que le Picker puisse voir les fichiers
                 scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.readonly',
-                callback: '', // Le callback est géré au chargement de la page
+                
+                callback: (tokenResponse) => { // Le callback gère la réponse du pop-up
+                    if (onLoginCallback) {
+                        if (tokenResponse.error) {
+                            console.error("Erreur de token:", tokenResponse.error);
+                            showNotification("Échec de l'autorisation", "error");
+                            onLoginCallback(false);
+                            return;
+                        }
+                        showNotification("Connecté à Google", "success");
+                        onLoginCallback(true);
+                    }
+                },
             });
 
             gisReady = true;
@@ -84,34 +98,17 @@ const googleApiManager = {
     },
 
     checkAllReady: () => {
+        // ‼‼ REVERT: Vérification simple du token
         if (gapiReady && gisReady && onLoginCallback) {
-            // ‼‼ MODIFICATION: Gère la réponse de redirection
-            googleApiManager.gis.oauth2.handleRedirectResult(
-                (tokenResponse) => {
-                    // C'est ici qu'on atterrit APRES la redirection de Google
-                    if (tokenResponse.error) {
-                        console.error("Erreur de token:", tokenResponse.error);
-                        showNotification("Échec de l'autorisation", "error");
-                        onLoginCallback(false);
-                        return;
-                    }
-                    // Connexion réussie via redirection
-                    showNotification("Connecté à Google", "success");
-                    onLoginCallback(true);
-                },
-                () => {
-                    // S'il n'y a pas de 'tokenResponse', on vérifie si on est déjà connecté
-                    const token = googleApiManager.gapi.client.getToken();
-                    onLoginCallback(token !== null);
-                }
-            );
+            const token = googleApiManager.gapi.client.getToken();
+            onLoginCallback(token !== null);
         }
     },
 
-    // ‼‼ MODIFICATION: handleLogin lance la redirection
+    // ‼‼ REVERT: handleLogin pour le POP-UP
     handleLogin: () => {
-        if (tokenClient) {
-            tokenClient.requestAccessToken({prompt: ''});
+        if (googleApiManager.tokenClient) {
+            googleApiManager.tokenClient.requestAccessToken();
         }
     },
 
