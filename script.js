@@ -2,7 +2,7 @@
    BACKROOM by FMR - v2.0 (Google Sheets Backend)
    ======================================================================== */
 
-// ‼‼ Callbacks globaux pour les scripts Google ‼‼
+// Callbacks globaux
 function gapiClientLoaded() {
     googleApiManager.gapiClientLoaded();
 }
@@ -16,7 +16,6 @@ function gisClientLoaded() {
 let gapiReady = false;
 let gisReady = false;
 let onLoginCallback = null;
-// let tokenClient = null; // Rendu au manager
 
 // ======================= GESTIONNAIRE GOOGLE API ======================= //
 const googleApiManager = {
@@ -26,7 +25,7 @@ const googleApiManager = {
 
     gapi: null,
     gis: null,
-    tokenClient: null, // ‼‼ REVERT: tokenClient est de retour dans le manager
+    tokenClient: null, 
 
     initClient: (onLoginStatusChange) => {
         onLoginCallback = onLoginStatusChange;
@@ -38,6 +37,7 @@ const googleApiManager = {
     gapiClientLoaded: () => {
         gapi.load('client:picker', async () => {
             try {
+                // Initialise le client GAPI (nécessaire pour Sheets ET Picker)
                 await gapi.client.init({
                     apiKey: googleApiManager.API_KEY,
                     discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
@@ -65,11 +65,11 @@ const googleApiManager = {
             }
             googleApiManager.gis = window.google.accounts;
             
-            // ‼‼ REVERT: Rétablissement du callback pour le flux POP-UP
+            // Initialisation pour le flux POP-UP
             googleApiManager.tokenClient = googleApiManager.gis.oauth2.initTokenClient({
                 client_id: googleApiManager.CLIENT_ID,
                 scope: 'https://www.googleapis.com/auth/spreadsheets',
-                callback: (tokenResponse) => { // Le callback est de retour
+                callback: (tokenResponse) => { // Le callback gère la réponse du pop-up
                     if (onLoginCallback) {
                         if (tokenResponse.error) {
                             console.error("Erreur de token:", tokenResponse.error);
@@ -94,14 +94,14 @@ const googleApiManager = {
     },
 
     checkAllReady: () => {
-        // ‼‼ REVERT: Rétablissement de la vérification simple du token
+        // Vérification simple du token (pas de gestion de redirection)
         if (gapiReady && gisReady && onLoginCallback) {
             const token = googleApiManager.gapi.client.getToken();
             onLoginCallback(token !== null);
         }
     },
 
-    // ‼‼ REVERT: Rétablissement du handleLogin pour le POP-UP
+    // handleLogin pour le POP-UP
     handleLogin: () => {
         if (googleApiManager.tokenClient) {
             googleApiManager.tokenClient.requestAccessToken();
@@ -171,7 +171,7 @@ const googleApiManager = {
             await googleApiManager.gapi.client.sheets.spreadsheets.values.update({
                 spreadsheetId: spreadsheetId,
                 range: range,
-                valueInputOption: 'USER_ENTERED', // Corrigé de 'USER_ENTERTERED'
+                valueInputOption: 'USER_ENTERED',
                 resource: { values: [values] }
             });
             showNotification("Produit mis à jour !", "success");
@@ -979,7 +979,8 @@ function createPicker() {
     const picker = new google.picker.PickerBuilder()
         .setAppId(googleApiManager.CLIENT_ID.split('-')[0])
         .setOAuthToken(token.access_token)
-        // On n'utilise plus la Clé API
+        // ‼‼ SOLUTION POUR LE 403 ‼‼
+        // Nous n'utilisons plus la Clé API ici.
         // .setDeveloperKey(googleApiManager.API_KEY) 
         .addView(view)
         .setCallback(pickerCallback)
