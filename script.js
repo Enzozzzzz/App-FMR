@@ -451,7 +451,7 @@ function resetAppView() {
 }
 
 // ======================= LOGIQUE DE NAVIGATION & VUE ======================= //
-// ... [Toutes les fonctions de Navigation (handleNavClick, etc.) sont identiques] ...
+
 function handleNavClick(e) {
     e.preventDefault();
     navLinks.forEach(l => l.classList.remove('active'));
@@ -515,7 +515,7 @@ function updateBreadcrumbs() {
 }
 
 // ======================= RENDU (VUES) ======================= //
-// ... [Toutes les fonctions de Rendu (renderSheetListView, etc.) sont identiques] ...
+
 async function renderSheetListView() {
     inventoryGrid.innerHTML = '';
     if (!spreadsheetDetails || !spreadsheetDetails.sheets) {
@@ -672,7 +672,7 @@ function createDynamicProductCardHTML(item, headers) {
 }
 
 // ======================= FORMULAIRES DYNAMIQUES ======================= //
-// ... [Toutes les fonctions de formulaire (buildImportTabForm, etc.) sont identiques] ...
+
 function buildImportTabForm() {
     if (!spreadsheetDetails) {
         if (importFormContainer) importFormContainer.innerHTML = '<h2 class="section-title"><i class="fas fa-file-import"></i> Ajouter un produit</h2><p>Veuillez d\'abord charger une Spreadsheet dans l\'onglet "Inventaire".</p>';
