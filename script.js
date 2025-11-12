@@ -657,6 +657,7 @@ function createDynamicProductCardHTML(item, headers) {
                 <span>Êtes-vous sûr ?</span>
                 <div class="confirm-actions">
                     <button class="btn btn-confirm-yes" data-action="confirm-delete-product">Oui</button>
+
                     <button class="btn btn-confirm-no" data-action="cancel-delete-product">Non</button>
                 </div>
             </div>
@@ -995,8 +996,9 @@ function createPicker() {
 }
 
 function pickerCallback(data) {
-    // ‼‼ CORRECTION Z-INDEX ‼‼
+    // ‼‼ CORRECTION Z-INDEX & CRASH ‼‼
     // Gérer le cas où l'utilisateur ferme le Picker (ou annule)
+    // ou si les données sont invalides (à cause du COOP)
     if (!data || data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
         sheetPrompt.classList.remove('hidden');
         return;
@@ -1004,12 +1006,18 @@ function pickerCallback(data) {
     
     // Gérer le cas où l'utilisateur choisit un fichier
     if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
-        const doc = data[google.picker.Document.DOCUMENTS][0];
-        const sheetId = doc[google.picker.Document.ID];
-        
-        spreadsheetIdInput.value = sheetId;
-        loadSpreadsheet(sheetId);
-        // On ne ré-affiche pas le modal, loadSpreadsheet s'en charge
+        // Vérification de sécurité avant d'accéder à [0]
+        if (data[google.picker.Document.DOCUMENTS] && data[google.picker.Document.DOCUMENTS].length > 0) {
+            const doc = data[google.picker.Document.DOCUMENTS][0];
+            const sheetId = doc[google.picker.Document.ID];
+            
+            spreadsheetIdInput.value = sheetId;
+            loadSpreadsheet(sheetId);
+        } else {
+             // Si 'PICKED' est vrai mais pas de document, c'est une erreur.
+            sheetPrompt.classList.remove('hidden');
+            showNotification("Erreur lors de la sélection du fichier.", "error");
+        }
     } 
 }
 
