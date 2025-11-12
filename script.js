@@ -19,7 +19,7 @@ let onLoginCallback = null;
 
 // ======================= GESTIONNAIRE GOOGLE API ======================= //
 const googleApiManager = {
-    // ‼‼ MODIFICATION: La Clé API n'est plus nécessaire ici
+    // ‼‼ MODIFICATION: La Clé API n'est plus nécessaire ‼‼
     // API_KEY: 'VOTRE_CLE_API',
     CLIENT_ID: '539526644294-d6jju7s5artqk518ptt3t27laih4i7qg.apps.googleusercontent.com',
 
@@ -37,7 +37,7 @@ const googleApiManager = {
     gapiClientLoaded: () => {
         gapi.load('client:picker', async () => {
             try {
-                // ‼‼ MODIFICATION: Initialisation SANS Clé API
+                // Initialisation SANS Clé API
                 await gapi.client.init({
                     // apiKey: googleApiManager.API_KEY, // -> Supprimé
                     discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
@@ -65,11 +65,14 @@ const googleApiManager = {
             }
             googleApiManager.gis = window.google.accounts;
             
-            // Initialisation pour le flux POP-UP
             googleApiManager.tokenClient = googleApiManager.gis.oauth2.initTokenClient({
                 client_id: googleApiManager.CLIENT_ID,
-                scope: 'https://www.googleapis.com/auth/spreadsheets',
-                callback: (tokenResponse) => { // Le callback gère la réponse du pop-up
+                
+                // ‼‼ CORRECTION POUR L'ERREUR 403 ‼‼
+                // Ajout du scope 'drive.readonly' pour que le Picker puisse voir les fichiers
+                scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.readonly',
+                
+                callback: (tokenResponse) => {
                     if (onLoginCallback) {
                         if (tokenResponse.error) {
                             console.error("Erreur de token:", tokenResponse.error);
@@ -94,14 +97,12 @@ const googleApiManager = {
     },
 
     checkAllReady: () => {
-        // Vérification simple du token
         if (gapiReady && gisReady && onLoginCallback) {
             const token = googleApiManager.gapi.client.getToken();
             onLoginCallback(token !== null);
         }
     },
 
-    // handleLogin pour le POP-UP
     handleLogin: () => {
         if (googleApiManager.tokenClient) {
             googleApiManager.tokenClient.requestAccessToken();
