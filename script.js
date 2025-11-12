@@ -2,7 +2,7 @@
    BACKROOM by FMR - v2.0 (Google Sheets Backend)
    ======================================================================== */
 
-// Callbacks globaux
+// ‼‼ Callbacks globaux pour les scripts Google ‼‼
 function gapiClientLoaded() {
     googleApiManager.gapiClientLoaded();
 }
@@ -16,16 +16,17 @@ function gisClientLoaded() {
 let gapiReady = false;
 let gisReady = false;
 let onLoginCallback = null;
-let tokenClient = null; // ‼‼ MODIFICATION: Déplacé hors du manager
+// let tokenClient = null; // Rendu au manager
 
 // ======================= GESTIONNAIRE GOOGLE API ======================= //
 const googleApiManager = {
-    API_KEY: 'AIzaSyCW7NcKb1euepVEb4zP688gjMRq_C7_XNU', // [c'est la clé que vous venez de créer]
+    // ⚠️ Assurez-vous que c'est votre clé API la plus récente
+    API_KEY: 'AIzaSyCW7NcKb1euepVEb4zP688gjMRq_C7_XNU',
     CLIENT_ID: '539526644294-d6jju7s5artqk518ptt3t27laih4i7qg.apps.googleusercontent.com',
 
     gapi: null,
     gis: null,
-    // tokenClient a été déplacé hors d'ici
+    tokenClient: null, // ‼‼ REVERT: tokenClient est de retour dans le manager
 
     initClient: (onLoginStatusChange) => {
         onLoginCallback = onLoginStatusChange;
@@ -64,13 +65,22 @@ const googleApiManager = {
             }
             googleApiManager.gis = window.google.accounts;
             
-            // ‼‼ MODIFICATION: Initialisation du Token Client
-            // Nous n'utilisons plus de 'callback' ici, car la réponse
-            // viendra par une redirection complète de la page.
-            tokenClient = googleApiManager.gis.oauth2.initTokenClient({
+            // ‼‼ REVERT: Rétablissement du callback pour le flux POP-UP
+            googleApiManager.tokenClient = googleApiManager.gis.oauth2.initTokenClient({
                 client_id: googleApiManager.CLIENT_ID,
                 scope: 'https://www.googleapis.com/auth/spreadsheets',
-                callback: '', // Le callback est géré au chargement de la page
+                callback: (tokenResponse) => { // Le callback est de retour
+                    if (onLoginCallback) {
+                        if (tokenResponse.error) {
+                            console.error("Erreur de token:", tokenResponse.error);
+                            showNotification("Échec de l'autorisation", "error");
+                            onLoginCallback(false);
+                            return;
+                        }
+                        showNotification("Connecté à Google", "success");
+                        onLoginCallback(true);
+                    }
+                },
             });
 
             gisReady = true;
@@ -84,37 +94,17 @@ const googleApiManager = {
     },
 
     checkAllReady: () => {
+        // ‼‼ REVERT: Rétablissement de la vérification simple du token
         if (gapiReady && gisReady && onLoginCallback) {
-            // ‼‼ MODIFICATION: Au lieu de juste vérifier le token,
-            // nous gérons la réponse de redirection s'il y en a une.
-            googleApiManager.gis.oauth2.handleRedirectResult(
-                (tokenResponse) => {
-                    // C'est ici qu'on atterrit APRES la redirection
-                    if (tokenResponse.error) {
-                        console.error("Erreur de token:", tokenResponse.error);
-                        showNotification("Échec de l'autorisation", "error");
-                        onLoginCallback(false);
-                        return;
-                    }
-                    // Connexion réussie via redirection
-                    showNotification("Connecté à Google", "success");
-                    onLoginCallback(true);
-                },
-                () => {
-                    // S'il n'y a pas de 'tokenResponse', on vérifie si on est déjà connecté
-                    const token = googleApiManager.gapi.client.getToken();
-                    onLoginCallback(token !== null);
-                }
-            );
+            const token = googleApiManager.gapi.client.getToken();
+            onLoginCallback(token !== null);
         }
     },
 
-    // ‼‼ MODIFICATION: handleLogin lance la redirection
+    // ‼‼ REVERT: Rétablissement du handleLogin pour le POP-UP
     handleLogin: () => {
-        if (tokenClient) {
-            // Au lieu de 'requestAccessToken', on utilise 'requestAccessToken' avec 'hint'
-            // pour déclencher le flux de redirection
-            tokenClient.requestAccessToken({prompt: ''});
+        if (googleApiManager.tokenClient) {
+            googleApiManager.tokenClient.requestAccessToken();
         }
     },
 
@@ -129,7 +119,6 @@ const googleApiManager = {
         }
     },
 
-    // ... (le reste du fichier : API CALLS, ÉLÉMENTS DU DOM, etc. est identique) ...
     // --- API CALLS ---
     getSpreadsheetDetails: async (spreadsheetId) => {
         if (!googleApiManager.gapi || !googleApiManager.gapi.client.getToken()) return null;
@@ -182,7 +171,7 @@ const googleApiManager = {
             await googleApiManager.gapi.client.sheets.spreadsheets.values.update({
                 spreadsheetId: spreadsheetId,
                 range: range,
-                valueInputOption: 'USER_ENTERTERED',
+                valueInputOption: 'USER_ENTERED', // Corrigé de 'USER_ENTERTERED'
                 resource: { values: [values] }
             });
             showNotification("Produit mis à jour !", "success");
@@ -972,7 +961,7 @@ function updateStatistics() {
 // ======================= UTILITAIRES ======================= //
 
 function createPicker() {
-    if (!googleApiManager.gapi || !tokenClient) { // Modifié de 'googleApiManager.tokenClient'
+    if (!googleApiManager.gapi || !googleApiManager.tokenClient) {
         showNotification("API Google non prête.", "error");
         return;
     }
@@ -990,7 +979,7 @@ function createPicker() {
     const picker = new google.picker.PickerBuilder()
         .setAppId(googleApiManager.CLIENT_ID.split('-')[0])
         .setOAuthToken(token.access_token)
-        // ‼‼ CORRECTION: Nous supprimons la Clé API qui cause l'erreur 403 ‼‼
+        // On n'utilise plus la Clé API
         // .setDeveloperKey(googleApiManager.API_KEY) 
         .addView(view)
         .setCallback(pickerCallback)
