@@ -1,9 +1,8 @@
 /* ========================================================================
-   BACKROOM by FMR - v2.0 (Google Sheets Backend)
-   Flux de REDIRECTION (pour contourner COOP/Vercel)
+   BACKROOM by FMR - v2.1 (Netlify & GSheets Optimized)
    ======================================================================== */
 
-// Callbacks globaux
+// Callbacks globaux requis par les scripts Google
 function gapiClientLoaded() {
     googleApiManager.gapiClientLoaded();
 }
@@ -12,7 +11,7 @@ function gisClientLoaded() {
     googleApiManager.gisClientLoaded();
 }
 
-// ----- Le reste du script commence ici -----
+// ----- Variables Globales -----
 
 let gapiReady = false;
 let gisReady = false;
@@ -21,14 +20,16 @@ let tokenClient = null;
 
 // ======================= GESTIONNAIRE GOOGLE API ======================= //
 const googleApiManager = {
+    // Votre Client ID
     CLIENT_ID: '539526644294-d6jju7s5artqk518ptt3t27laih4i7qg.apps.googleusercontent.com',
     gapi: null,
     gis: null,
 
     initClient: (onLoginStatusChange) => {
         onLoginCallback = onLoginStatusChange;
+        // Si les scripts sont déjà chargés (cas de rechargement rapide), on vérifie
         if (gisReady && gapiReady) {
-            googleApiManager.checkAllReady();
+            googleApiManager.tryAutoLogin();
         }
     },
 
@@ -40,14 +41,10 @@ const googleApiManager = {
                 });
                 googleApiManager.gapi = gapi;
                 gapiReady = true;
-                if (gisReady) {
-                    googleApiManager.checkAllReady();
-                }
+                if (gisReady) googleApiManager.tryAutoLogin();
             } catch (err) {
                 console.error("Erreur d'init GAPI client", err);
-                if (typeof showNotification === 'function') {
-                    showNotification("Erreur de chargement GAPI", "error");
-                }
+                showNotification("Erreur de chargement GAPI", "error");
             }
         });
     },
@@ -56,66 +53,48 @@ const googleApiManager = {
         try {
             if (!window.google || !window.google.accounts) {
                 console.error("GIS chargé, mais window.google.accounts n'est pas dispo.");
-                if (typeof showNotification === 'function') {
-                    showNotification("Erreur critique de l'API Google", "error");
-                }
                 return;
             }
             googleApiManager.gis = window.google.accounts;
             
-            // Initialisation pour le flux REDIRECT
+            // Configuration propre du Token Client (Mode Popup)
             tokenClient = googleApiManager.gis.oauth2.initTokenClient({
                 client_id: googleApiManager.CLIENT_ID,
                 scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.readonly',
-                callback: '', // Le callback est géré au chargement de la page
+                callback: (tokenResponse) => {
+                    // Callback déclenché APRES que l'utilisateur a accepté dans le popup
+                    if (tokenResponse && tokenResponse.access_token) {
+                        // Le token est automatiquement stocké par gapi.client si gapi est init
+                        showNotification("Connecté à Google avec succès", "success");
+                        if (onLoginCallback) onLoginCallback(true);
+                    }
+                },
             });
 
             gisReady = true;
-            if (gapiReady) {
-                googleApiManager.checkAllReady();
-            }
+            if (gapiReady) googleApiManager.tryAutoLogin();
         } catch (e) {
             console.error("Erreur d'init GIS client", e);
-            if (typeof showNotification === 'function') {
-                showNotification("Erreur de chargement des API Google (GIS)", "error");
-            }
+            showNotification("Erreur de chargement des API Google (GIS)", "error");
         }
     },
 
-    checkAllReady: () => {
-        // ‼‼ CORRECTION: C'est la bonne façon de gérer la redirection ‼‼
-        
-        // 1. Vérifier si l'URL contient un jeton de retour
-        const hash = window.location.hash;
-        if (hash.includes("access_token")) {
-            const params = new URLSearchParams(hash.substring(1)); // Enlever le #
-            
-            // Vérifier si c'est bien une réponse OAuth
-            if (params.has('access_token')) {
-                const token = {
-                    access_token: params.get('access_token'),
-                    expires_in: params.get('expires_in'),
-                };
-
-                // Stocker le jeton et nettoyer l'URL
-                googleApiManager.gapi.client.setToken(token);
-                window.location.hash = ''; // Nettoie l'URL
-                
-                showNotification("Connecté à Google", "success");
-                onLoginCallback(true);
-                return; // Important: on arrête ici
-            }
-        } 
-        
-        // 2. Si pas de jeton dans l'URL, vérifier si on est déjà connecté (session précédente)
+    tryAutoLogin: () => {
+        // Vérifie si une session existe déjà (sans ouvrir de popup)
         const token = googleApiManager.gapi.client.getToken();
-        onLoginCallback(token !== null);
+        if (token && onLoginCallback) {
+            onLoginCallback(true);
+        }
     },
 
-    // handleLogin lance la redirection
+    // Lance le Popup de connexion
     handleLogin: () => {
         if (tokenClient) {
-            tokenClient.requestAccessToken({prompt: ''}); // Redirige la page
+            // override_scope: false permet de garder les permissions existantes
+            // prompt: '' évite de redemander la permission si déjà accordée
+            tokenClient.requestAccessToken({prompt: ''}); 
+        } else {
+            showNotification("Le service de connexion n'est pas encore prêt.", "error");
         }
     },
 
@@ -413,7 +392,9 @@ async function handleChangeSheet() {
         
         resetAppView(); 
         
-        handleLoginStatusChange(true);
+        // On reste connecté, mais on affiche le prompt de choix de sheet
+        sheetPrompt.classList.remove('hidden');
+        appContainer.style.display = 'none';
     }
 }
 
@@ -621,7 +602,8 @@ function createDynamicProductCardHTML(item, headers) {
     const status = item[statusKey] || '';
     const sourcing = item[sourcingKey] || '';
 
-    let imageUrl = 'https://via.placeholder.com/400x300/cccccc/ffffff?text=Image';
+    // MODIFICATION ICI : Remplacement de via.placeholder.com par placehold.co pour la stabilité
+    let imageUrl = 'https://placehold.co/400x300/e6e6e6/1d1d1d?text=Image';
     if (item[imageKey]) {
         imageUrl = item[imageKey].split(',')[0].trim();
     }
@@ -993,7 +975,6 @@ function createPicker() {
     const picker = new google.picker.PickerBuilder()
         .setAppId(googleApiManager.CLIENT_ID.split('-')[0])
         .setOAuthToken(token.access_token)
-        // .setDeveloperKey(googleApiManager.API_KEY) // -> Supprimé
         .addView(view)
         .setCallback(pickerCallback)
         .build();
