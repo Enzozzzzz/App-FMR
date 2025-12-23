@@ -4,8 +4,12 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    # C'est la ligne CRITIQUE pour que le popup Google fonctionne
-    Cross-Origin-Opener-Policy = "same-origin-allow-popups"
-    # Cela permet de charger des ressources externes (images, scripts Google) sans blocage strict
+    # "unsafe-none" est la valeur par défaut la plus permissive.
+    # Cela permet à la popup Google d'accéder à votre fenêtre principale sans blocage.
+    Cross-Origin-Opener-Policy = "unsafe-none"
     Cross-Origin-Embedder-Policy = "unsafe-none"
+    
+    # Sécurité standard pour les autres aspects
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
     Referrer-Policy = "no-referrer-when-downgrade"
