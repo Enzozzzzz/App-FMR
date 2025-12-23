@@ -1,0 +1,11 @@
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # C'est la ligne CRITIQUE pour que le popup Google fonctionne
+    Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+    # Cela permet de charger des ressources externes (images, scripts Google) sans blocage strict
+    Cross-Origin-Embedder-Policy = "unsafe-none"
+    Referrer-Policy = "no-referrer-when-downgrade"
